@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aina + Voice Assistant</title>
+<style>
+/* ---------------- Basic styles ---------------- */
+* { box-sizing: border-box; margin:0; padding:0; }
+html, body { height:100%; width:100%; font-family:'Segoe UI',sans-serif; background:#0a0a0a; color:#fff; display:flex; flex-direction:column; }
+
+/* Mode switch bar */
+#mode-bar { display:flex; gap:6px; padding:10px; background:#111; border-bottom:1px solid #333; }
+#mode-bar button { flex:1; padding:12px; font-size:1rem; border-radius:8px; border:none; cursor:pointer; transition:all 0.2s; background:#0077cc; color:#fff; }
+#mode-bar button.active { background:#00aaff; }
+
+/* Chat area */
+#chat-container { flex:1 1 auto; overflow-y:auto; padding:12px; background:#121212; margin-bottom:70px; }
+.bubble { margin:6px 0; padding:12px 16px; border-radius:18px; max-width:80%; word-wrap:break-word; font-size:1rem; line-height:1.4; transition:all 0.2s; }
+.user { background:linear-gradient(45deg,#0077cc,#00aaff); color:#fff; margin-left:auto; text-align:right; box-shadow:0 4px 10px rgba(0,170,255,0.3);}
+.bot { background:#222; color:#fff; margin-right:auto; text-align:left; box-shadow:0 4px 10px rgba(255,255,255,0.05);}
+
+/* Input bars */
+#text-mode, #voice-mode, #voice-cont-mode { position:fixed; bottom:0; left:0; width:100%; display:flex; gap:6px; padding:10px; background:#1a1a1a; border-top:1px solid #333; align-items:center; z-index:1000; }
+#text-mode input { flex:1; padding:14px 12px; font-size:1rem; border-radius:8px; border:none; background:#222; color:#fff; outline:none; }
+#text-mode button, #voice-mode button, #voice-cont-mode button { flex-shrink:0; padding:12px 16px; font-size:1rem; border-radius:8px; border:none; cursor:pointer; }
+#text-mode button:nth-child(2), #voice-mode button:first-child { background:#0077cc; color:#fff; }
+#text-mode button:nth-child(2):hover, #voice-mode button:first-child:hover { background:#00aaff; transform:scale(1.05); }
+#stopBtn, #stopBtnVoice, #stopBtnCont { background:#cc0000; color:#fff; }
+#stopBtn:hover, #stopBtnVoice:hover, #stopBtnCont:hover { background:#ff3333; transform:scale(1.05); }
+
+/* Mood detector card */
+#aina-card { background:#121a33; padding:20px; border-radius:16px; max-width:520px; margin:12px auto; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.35); }
+.glow-text { font-size:18px; font-weight:600; background:linear-gradient(90deg,#7c9cff,#b9e0ff,#7c9cff); background-clip:text; -webkit-background-clip:text; -webkit-text-fill-color:transparent; animation:glow 3s infinite alternate; }
+@keyframes glow { from { text-shadow:0 0 10px #7c9cff,0 0 20px #7c9cff; } to { text-shadow:0 0 20px #b9e0ff,0 0 30px #7c9cff; } }
+.exercise { margin-top:10px; font-size:15px; color:#cfd8f3; text-shadow:0 0 8px rgba(124,156,255,0.5); }
+
+/* Scrollbar */
+#chat-container::-webkit-scrollbar { width:6px; }
+#chat-container::-webkit-scrollbar-thumb { background:#555; border-radius:3px; }
+
+/* Mobile adjustments */
+@media(max-width:768px){
+  #text-mode,#voice-mode,#voice-cont-mode{position:relative; bottom:auto; left:auto; width:100%;}
+  #chat-container{margin-bottom:0;}
+  .bubble{font-size:0.9rem;padding:8px 10px;max-width:90%;}
+  #text-mode input{font-size:0.9rem;}
+  #text-mode button,#voice-mode button{font-size:0.9rem;padding:10px 12px;}
+}
+</style>
+</head>
+<body>
+
+<!-- Mode Switch -->
+<div id="mode-bar">
+  <button id="ainaBtn" class="active" onclick="switchMode('aina')">Mood Detector</button>
+  <button id="textModeBtn" onclick="switchMode('text')">Text/Voice Chat</button>
+</div>
+
+<!-- Mood Detector -->
+<div id="aina-card">
+  <h1>Mood Detector</h1>
+  <button id="startBtn">Start</button>
+  <div id="aina-result">Press start to analyze your mood</div>
+  <video id="aina-video" autoplay muted playsinline style="display:none;"></video>
+  <canvas id="aina-overlay" style="display:none;"></canvas>
+</div>
+
+<!-- Chat Window -->
+<div id="chat-container" style="display:none;"></div>
+
+<!-- Text Mode -->
+<div id="text-mode" style="display:none;">
+  <input id="textInput" placeholder="Type your message..." 
+         onkeydown="if(event.key==='Enter'){event.preventDefault(); sendTextMessage();}">
+  <button onclick="sendTextMessage()">Send</button>
+  <button id="stopBtn" onclick="stopAll()">Stop</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
+<script>
+/* ----------------- Aina Mood Detector ----------------- */
+const video = document.getElementById('aina-video');
+const canvas = document.getElementById('aina-overlay');
+const ctx = canvas.getContext('2d');
+const resultEl = document.getElementById('aina-result');
+const startBtn = document.getElementById('startBtn');
+const MODEL_URL = 'https://cdn.jsdelivr.net/gh/vladmandic/face-api/model/';
+let stream=null;
+
+async function loadModels() {
+  await Promise.all([
+    faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+    faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
+  ]);
+}
+
+async function startCamera() {
+  if(!stream){ stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false}); video.srcObject=stream; await video.play();}
+  canvas.width=video.videoWidth; canvas.height=video.videoHeight;
+}
+
+function topExpression(expressions){
+  let best={key:'neutral',val:0};
+  for(const [key,val] of Object.entries(expressions)){if(val>best.val) best={key,val};}
+  return best;
+}
+
+function getMessage(emotion){
+  const map={
+    angry:{quote:"I am in control of my emotions.",exercise:"Box Breathing: Inhale 4, hold 4, exhale 4, hold 4 x3."},
+    happy:{quote:"Happiness flows through me.",exercise:"Think of 3 things you're grateful for."},
+    sad:{quote:"This feeling is temporary.",exercise:"5-4-3-2-1 Grounding exercise."},
+    neutral:{quote:"Your calm presence is beautiful.",exercise:"Stretch lightly."},
+    surprised:{quote:"Unexpected moments bring gifts.",exercise:"Name 3 familiar things you see."},
+    fearful:{quote:"Fear is a passing cloud.",exercise:"Take 5 slow breaths."},
+    disgusted:{quote:"What disturbs you doesn't stay.",exercise:"Listen to a calming song."},
+  };
+  return map[emotion]||{quote:"Stay mindful.",exercise:"Take a short pause."};
+}
+
+async function analyze(){
+  await startCamera();
+  resultEl.textContent="Analyzing for 4 seconds…";
+  startBtn.style.display="none";
+  let collected=[]; const startTime=Date.now();
+  async function capture(){
+    const options=new faceapi.TinyFaceDetectorOptions({inputSize:512,scoreThreshold:0.5});
+    const res=await faceapi.detectSingleFace(video,options).withFaceExpressions();
+    if(res) collected.push(res.expressions);
+    if(Date.now()-startTime<4000){ requestAnimationFrame(capture);}
+    else{
+      if(collected.length===0){ resultEl.textContent="No face detected."; startBtn.style.display="inline-block"; return; }
+      const avg={}; collected.forEach(exp=>{for(const [k,v] of Object.entries(exp)){avg[k]=(avg[k]||0)+v;}});
+      for(const k in avg) avg[k]/=collected.length;
+      const top=topExpression(avg);
+      const msg=getMessage(top.key);
+      resultEl.innerHTML=`Detected mood: <span class="glow-text">${top.key.toUpperCase()}</span><br>${msg.quote}<br><span class="exercise">${msg.exercise}</span>`;
+      startBtn.style.display="inline-block";
+    }
+  }
+  capture();
+}
+
+startBtn.addEventListener('click',analyze);
+
+/* ----------------- Mode Switch ----------------- */
+let currentMode='aina';
+function switchMode(mode){
+  currentMode=mode;
+  document.getElementById('aina-card').style.display=mode==='aina'?'block':'none';
+  document.getElementById('chat-container').style.display=(mode==='text'?'block':'none');
+  document.getElementById('text-mode').style.display=(mode==='text'?'flex':'none');
+  document.getElementById('ainaBtn').classList.toggle('active',mode==='aina');
+  document.getElementById('textModeBtn').classList.toggle('active',mode==='text');
+}
+
+/* ----------------- Voice/Text Chat ----------------- */
+let apiBase = "https://voice-assistant-api-yya9.onrender.com"; // your API URL
+let mic = null, utter=null;
+
+function addMessage(text,sender){
+  const container=document.getElementById("chat-container");
+  const msg=document.createElement("div");
+  msg.className="bubble "+sender; msg.innerText=text;
+  container.appendChild(msg); container.scrollTop=container.scrollHeight;
+}
+
+function formatTime12Hour(){ const now=new Date(); let h=now.getHours(), m=now.getMinutes(); const ampm=h>=12?'PM':'AM'; h=h%12; if(h===0) h=12; return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')} ${ampm}`; }
+
+async function sendTextMessage(){
+  const input=document.getElementById("textInput"); const text=input.value.trim(); if(!text) return;
+  if(speechSynthesis.speaking) speechSynthesis.cancel(); stopVoice();
+  addMessage(text,"user"); input.value="";
+  try{
+    let answerText=text.toLowerCase().includes("time")?formatTime12Hour():"";
+    if(!answerText){
+      const res=await fetch(apiBase+"/ask?question="+encodeURIComponent(text));
+      const data=await res.json(); answerText=(data && data.answer)?data.answer:"No answer";
+    }
+    addMessage(answerText,"bot");
+    if(speechSynthesis.speaking) speechSynthesis.cancel(); utter=new SpeechSynthesisUtterance(answerText); speechSynthesis.speak(utter);
+  } catch(err){ console.error(err); addMessage("Error connecting to API","bot"); }
+}
+
+function stopVoice(){ if(mic){ mic.onresult=null; mic.onerror=null; mic.stop(); mic=null; } }
+function stopAll(){ stopVoice(); if(speechSynthesis.speaking) speechSynthesis.cancel();}
+</script>
+
+</body>
+</html>
