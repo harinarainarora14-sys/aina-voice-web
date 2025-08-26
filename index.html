@@ -37,6 +37,7 @@
     #toggleVoice { position:fixed; bottom:20px; right:20px; z-index:1000; background:var(--card); border:1px solid var(--btn-br); border-radius:20px; padding:10px 16px; box-shadow:0 4px 12px rgba(0,0,0,.4); }
     #toggleVoice.pulse { animation: pulse 1.6s infinite; border-color:var(--glow1); }
     @keyframes pulse { 0% { box-shadow:0 0 0 0 rgba(124,156,255,0.12); } 70% { box-shadow:0 0 0 8px rgba(124,156,255,0.02); } 100% { box-shadow:0 0 0 0 rgba(124,156,255,0.0); } }
+    #iosUnlockBtn { position:fixed; top:40%; left:50%; transform:translate(-50%,-50%); padding:20px 30px; border-radius:14px; border:none; background:var(--glow1); color:#000; font-weight:600; font-size:16px; display:none; z-index:2000; }
   </style>
 </head>
 <body>
@@ -82,37 +83,33 @@
 </div>
 
 <button id="toggleVoice">Hide Assistant</button>
+<button id="iosUnlockBtn">Tap to Enable Speech</button>
 
 <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
 <script>
 const API_URL = "https://voice-assistant-api-yya9.onrender.com/ask";
 
-// iOS-specific TTS unlock
 let audioUnlocked = false;
 let speechQueue = [];
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-
-if (isIOS) {
-  function unlockAudio() {
-    if (!audioUnlocked) {
-      try { const u = new SpeechSynthesisUtterance(""); u.volume = 0; speechSynthesis.speak(u); } catch(e){}
-      audioUnlocked = true;
-      while(speechQueue.length) speak(speechQueue.shift());
-    }
-  }
-  ["click","touchstart","pointerdown"].forEach(evt=>{
-    window.addEventListener(evt, unlockAudio, { once:true });
-  });
-}
+const iosBtn = document.getElementById('iosUnlockBtn');
 
 function speak(text) {
   if (!text) return;
-  if (isIOS && !audioUnlocked) { speechQueue.push(text); return; }
+  if (isIOS && !audioUnlocked) { speechQueue.push(text); iosBtn.style.display = 'block'; return; }
   try { speechSynthesis.cancel(); const utter = new SpeechSynthesisUtterance(text); speechSynthesis.speak(utter); }
   catch(e){ console.warn("TTS error:", e);}
 }
 
 function stopSpeaking(){ try { speechSynthesis.cancel(); } catch(e){} }
+
+if(isIOS){
+  iosBtn.addEventListener('click',()=>{
+    try { const u = new SpeechSynthesisUtterance(""); u.volume=0; speechSynthesis.speak(u); audioUnlocked=true; } catch(e){}
+    iosBtn.style.display='none';
+    while(speechQueue.length) speak(speechQueue.shift());
+  });
+}
 
 // Mode toggles
 const mText=document.getElementById('mText'), mVoice=document.getElementById('mVoice'), mCont=document.getElementById('mCont');
@@ -171,11 +168,7 @@ function newRecognizer(isContinuous){
 }
 
 const startVoice=document.getElementById('startVoice');
-startVoice.onclick=()=>{
-  stopVoiceRec();
-  rec=newRecognizer(false);
-  if(rec) try{ rec.start(); } catch(e){ console.warn(e); }
-};
+startVoice.onclick=()=>{ stopVoiceRec(); rec=newRecognizer(false); if(rec) try{ rec.start(); } catch(e){ console.warn(e); } };
 
 const startCont=document.getElementById('startCont');
 function startContinuous(){ stopVoiceRec(); contModeActive=true; rec=newRecognizer(true); if(rec) try{ rec.start(); } catch(e){ console.warn(e);} }
