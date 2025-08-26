@@ -11,285 +11,167 @@
       --glow1:#7c9cff; --glow2:#b9e0ff;
     }
     * { box-sizing:border-box; }
-    html,body { height:100%; }
-    body {
-      margin:0; background:var(--bg); color:var(--ink);
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      min-height:100vh; display:flex; flex-direction:column;
-      align-items:center; justify-content:center;
-      padding:24px; gap:24px;
-    }
-    .wrap { width:100%; max-width:1100px; display:flex; gap:24px;
-      flex-wrap:wrap; justify-content:center; align-items:flex-start; }
+    html,body { height:100%; margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color:var(--ink); }
+    body { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; gap:24px; background:var(--bg); min-height:100vh; }
+    .wrap { width:100%; max-width:1100px; display:flex; gap:24px; flex-wrap:wrap; justify-content:center; align-items:flex-start; }
     .wrap.solo { justify-content:center; }
     .wrap.solo .card#moodCard { max-width:640px; width:100%; }
-
-    .card {
-      background:var(--card); border-radius:16px; padding:20px;
-      box-shadow:0 10px 30px rgba(0,0,0,.35);
-      flex:1; min-width:300px; max-width:500px;
-    }
+    .card { background:var(--card); border-radius:16px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,.35); flex:1; min-width:300px; max-width:500px; }
     h1 { margin:0 0 10px; font-size:22px; }
     .sub { opacity:.8; font-size:14px; margin-bottom:14px; }
-
-    button {
-      background:var(--btn); color:var(--ink);
-      border:1px solid var(--btn-br);
-      padding:10px 14px; border-radius:12px; cursor:pointer;
-      font-size:14px; transition:transform .15s ease, border-color .15s ease;
-    }
+    button { background:var(--btn); color:var(--ink); border:1px solid var(--btn-br); padding:10px 14px; border-radius:12px; cursor:pointer; font-size:14px; transition:transform .15s ease, border-color .15s ease; }
     button:hover { transform:scale(1.05); border-color:var(--glow1); }
     button[disabled]{ opacity:.6; cursor:not-allowed; transform:none; }
-
-    input[type="text"]{
-      width:100%; padding:12px; border-radius:12px; border:1px solid var(--btn-br);
-      background:var(--btn); color:var(--ink); outline:none;
-    }
+    input[type="text"]{ width:100%; padding:12px; border-radius:12px; border:1px solid var(--btn-br); background:var(--btn); color:var(--ink); outline:none; }
     .row{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
     .result { margin-top:14px; font-size:16px; line-height:1.6; }
-    .glow-text {
-      font-weight:600; font-size:18px;
-      background: linear-gradient(90deg, var(--glow1), var(--glow2), var(--glow1));
-      -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
-      animation: glow 3s infinite alternate;
-    }
-    @keyframes glow {
-      from { text-shadow:0 0 10px var(--glow1), 0 0 20px var(--glow1); }
-      to   { text-shadow:0 0 20px var(--glow2), 0 0 30px var(--glow1); }
-    }
+    .glow-text { font-weight:600; font-size:18px; background: linear-gradient(90deg, var(--glow1), var(--glow2), var(--glow1)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; animation: glow 3s infinite alternate; }
+    @keyframes glow { from { text-shadow:0 0 10px var(--glow1), 0 0 20px var(--glow1); } to { text-shadow:0 0 20px var(--glow2), 0 0 30px var(--glow1); } }
     .exercise { margin-top:8px; font-size:15px; color:var(--muted); text-shadow:0 0 8px rgba(124,156,255,.5); }
-
     .modebar { display:flex; gap:8px; margin:8px 0 12px; align-items:center; }
     .modebar button.active { border-color:var(--glow1); transform:scale(1.03); }
     .panel { display:none; }
     .panel.show{ display:block; }
     .answer { min-height:48px; }
     .hint { font-size:12px; opacity:.75; margin-top:6px; }
-
-    #toggleVoice {
-      position:fixed; bottom:20px; right:20px; z-index:1000;
-      background:var(--card); border:1px solid var(--btn-br);
-      border-radius:20px; padding:10px 16px;
-      box-shadow:0 4px 12px rgba(0,0,0,.4);
-    }
+    #toggleVoice { position:fixed; bottom:20px; right:20px; z-index:1000; background:var(--card); border:1px solid var(--btn-br); border-radius:20px; padding:10px 16px; box-shadow:0 4px 12px rgba(0,0,0,.4); }
     #toggleVoice.pulse { animation: pulse 1.6s infinite; border-color:var(--glow1); }
-    @keyframes pulse {
-      0% { box-shadow:0 0 0 0 rgba(124,156,255,0.12); }
-      70% { box-shadow:0 0 0 8px rgba(124,156,255,0.02); }
-      100% { box-shadow:0 0 0 0 rgba(124,156,255,0.0); }
-    }
+    @keyframes pulse { 0% { box-shadow:0 0 0 0 rgba(124,156,255,0.12); } 70% { box-shadow:0 0 0 8px rgba(124,156,255,0.02); } 100% { box-shadow:0 0 0 0 rgba(124,156,255,0.0); } }
   </style>
 </head>
 <body>
-  <div class="wrap" id="mainWrap">
-    <!-- Mood Detector -->
-    <div class="card" id="moodCard">
-      <h1>Mood Detector</h1>
-      <div class="sub">Analyze your facial expression for 4 seconds.</div>
-      <div class="row">
-        <button id="startMood">Start</button>
-      </div>
-      <div id="moodResult" class="result">Press Start to analyze your mood.</div>
-      <video id="video" autoplay muted playsinline style="display:none"></video>
-      <canvas id="overlay" style="display:none"></canvas>
-    </div>
-
-    <!-- Voice Assistant -->
-    <div class="card" id="voiceCard">
-      <h1>Voice Assistant</h1>
-      <div class="sub">Ask by typing, single voice shot, or continuous conversation.</div>
-
-      <div class="modebar">
-        <button id="mText" class="active">Text Mode</button>
-        <button id="mVoice">Voice Chat</button>
-        <button id="mCont">Voice Continuous</button>
-        <div style="flex:1"></div>
-        <button id="stopAll">⏹ Stop</button>
-      </div>
-
-      <div id="panelText" class="panel show">
-        <div class="row" style="margin-bottom:8px; width:100%">
-          <input id="textIn" type="text" placeholder="Type your message…" />
-          <button id="sendBtn">Send</button>
-        </div>
-        <div class="hint">Auto-speaks every reply. “Stop” cancels speech.</div>
-      </div>
-
-      <div id="panelVoice" class="panel">
-        <div class="row">
-          <button id="startVoice">🎤 Start Listening</button>
-        </div>
-        <div class="hint">Single utterance → answer → auto-speak.</div>
-      </div>
-
-      <div id="panelCont" class="panel">
-        <div class="row">
-          <button id="startCont">🔄 Start Continuous</button>
-        </div>
-        <div class="hint">Keeps listening and responding until you press Stop.</div>
-      </div>
-
-      <div id="answer" class="result answer">Ask something by text or voice.</div>
-    </div>
+<div class="wrap" id="mainWrap">
+  <!-- Mood Detector -->
+  <div class="card" id="moodCard">
+    <h1>Mood Detector</h1>
+    <div class="sub">Analyze your facial expression for 4 seconds.</div>
+    <div class="row"><button id="startMood">Start</button></div>
+    <div id="moodResult" class="result">Press Start to analyze your mood.</div>
+    <video id="video" autoplay muted playsinline style="display:none"></video>
+    <canvas id="overlay" style="display:none"></canvas>
   </div>
 
-  <button id="toggleVoice">Hide Assistant</button>
+  <!-- Voice Assistant -->
+  <div class="card" id="voiceCard">
+    <h1>Voice Assistant</h1>
+    <div class="sub">Ask by typing, single voice shot, or continuous conversation.</div>
+    <div class="modebar">
+      <button id="mText" class="active">Text Mode</button>
+      <button id="mVoice">Voice Chat</button>
+      <button id="mCont">Voice Continuous</button>
+      <div style="flex:1"></div>
+      <button id="stopAll">⏹ Stop</button>
+    </div>
+    <div id="panelText" class="panel show">
+      <div class="row" style="margin-bottom:8px; width:100%">
+        <input id="textIn" type="text" placeholder="Type your message…" />
+        <button id="sendBtn">Send</button>
+      </div>
+      <div class="hint">Auto-speaks every reply. “Stop” cancels speech.</div>
+    </div>
+    <div id="panelVoice" class="panel">
+      <div class="row"><button id="startVoice">🎤 Start Listening</button></div>
+      <div class="hint">Single utterance → answer → auto-speak.</div>
+    </div>
+    <div id="panelCont" class="panel">
+      <div class="row"><button id="startCont">🔄 Start Continuous</button></div>
+      <div class="hint">Keeps listening and responding until you press Stop.</div>
+    </div>
+    <div id="answer" class="result answer">Ask something by text or voice.</div>
+  </div>
+</div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
-  <script>
-    /*************** CONFIG ***************/
-    const API_URL = "https://voice-assistant-api-yya9.onrender.com/ask";
+<button id="toggleVoice">Hide Assistant</button>
 
-    /*************** TTS ***************/
-    let audioUnlocked = false;
-    let currentUtterance = null;
-    ["click","touchstart","pointerdown"].forEach(evt=>{
-      window.addEventListener(evt, () => {
-        if (!audioUnlocked) {
-          try {
-            const u = new SpeechSynthesisUtterance(" ");
-            u.volume = 0;
-            speechSynthesis.speak(u);
-          } catch(e){}
-          audioUnlocked = true;
-        }
-      }, { once:true });
-    });
-    function speak(text) {
-      if (!text) return;
-      try {
-        speechSynthesis.cancel();
-        currentUtterance = new SpeechSynthesisUtterance(text);
-        speechSynthesis.speak(currentUtterance);
-      } catch (e) {}
-    }
-    function stopSpeaking() { try { speechSynthesis.cancel(); } catch(e){} }
+<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
+<script>
+const API_URL = "https://voice-assistant-api-yya9.onrender.com/ask";
 
-    /*************** Elements ***************/
-    const startMoodBtn = document.getElementById('startMood');
-    const startVoice = document.getElementById('startVoice');
-    const stopAllBtn = document.getElementById('stopAll');
+let audioUnlocked=false,currentUtterance=null;
+["click","touchstart","pointerdown"].forEach(evt=>window.addEventListener(evt,()=>{if(!audioUnlocked){try{const u=new SpeechSynthesisUtterance(" ");u.volume=0; speechSynthesis.speak(u);}catch(e){} audioUnlocked=true;}},{once:true}));
 
-    /*************** Recognition ***************/
-    let rec = null;
-    let contModeActive = false;
-    function newRecognizer(isContinuous){
-      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SR){ alert("Speech recognition not supported."); return null; }
-      const r = new SR();
-      r.lang = "en-US";
-      r.continuous = isContinuous;
-      r.interimResults = false;
-      r.onresult = (e)=>{
-        for (let i=e.resultIndex; i<e.results.length; i++){
-          if (e.results[i].isFinal){
-            const transcript = e.results[i][0].transcript.trim();
-            if (transcript) ask(transcript);
-          }
-        }
-      };
-      r.onend = ()=>{ if (isContinuous && contModeActive) setTimeout(()=>{ try{r.start();}catch(e){} },250); };
-      return r;
-    }
-    function stopVoiceRec(){
-      contModeActive = false;
-      try { if (rec) rec.onend = null; } catch(e){}
-      try { if (rec) rec.stop(); } catch(e){}
-      rec = null;
-    }
+function speak(text){if(!text) return; try{speechSynthesis.cancel();currentUtterance=new SpeechSynthesisUtterance(text);speechSynthesis.speak(currentUtterance);}catch(e){console.warn("TTS error:",e);}}
+function stopSpeaking(){try{speechSynthesis.cancel();}catch(e){}}
 
-    // Start voice (one-shot)
-    startVoice.onclick = ()=>{
-      stopVoiceRec();
-      rec = newRecognizer(false);
-      if (rec) { try { rec.start(); } catch(e){} }
-    };
+const mText=document.getElementById('mText'), mVoice=document.getElementById('mVoice'), mCont=document.getElementById('mCont');
+const panelText=document.getElementById('panelText'), panelVoice=document.getElementById('panelVoice'), panelCont=document.getElementById('panelCont');
+const stopAllBtn=document.getElementById('stopAll'), answerEl=document.getElementById('answer');
+const textIn=document.getElementById('textIn'), sendBtn=document.getElementById('sendBtn');
+let rec=null, contModeActive=false;
 
-    // Stop all
-    stopAllBtn.onclick = ()=>{
-      stopVoiceRec();
-      stopSpeaking();
-    };
+function setMode(which){
+  [mText,mVoice,mCont].forEach(b=>b.classList.remove('active'));
+  [panelText,panelVoice,panelCont].forEach(p=>p.classList.remove('show'));
+  if(which==='text'){mText.classList.add('active');panelText.classList.add('show');stopVoiceRec();}
+  if(which==='voice'){mVoice.classList.add('active');panelVoice.classList.add('show');stopVoiceRec();}
+  if(which==='cont'){mCont.classList.add('active');panelCont.classList.add('show');startContinuous();}
+}
+mText.onclick=()=>setMode('text'); mVoice.onclick=()=>setMode('voice'); mCont.onclick=()=>setMode('cont');
 
-    /*************** Mood Detector ***************/
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('overlay');
-    const moodResult = document.getElementById('moodResult');
-    let stream = null;
-    const MODEL_URL = 'https://cdn.jsdelivr.net/gh/vladmandic/face-api/model/';
-    async function loadModels() {
-      await Promise.all([
-        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-        faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
-      ]);
-    }
-    async function startCamera() {
-      if (!stream) {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-        video.srcObject = stream;
-        await video.play();
-      }
-      canvas.width = video.videoWidth || 640;
-      canvas.height = video.videoHeight || 480;
-    }
-    function topExpression(expressions) {
-      let best = { key: 'neutral', val: 0 };
-      for (const [k, v] of Object.entries(expressions)) if (v > best.val) best = { key:k, val:v };
-      return best;
-    }
-    function moodMessage(emotion) {
-      const map = { happy:{quote:"Happiness flows.",exercise:"Think 3 things you're grateful for."}, sad:{quote:"This feeling is temporary.",exercise:"5-4-3-2-1 Grounding."}, neutral:{quote:"Your calm presence is beauty.",exercise:"Stretch lightly."}, angry:{quote:"You control your emotions.",exercise:"Box breathing."}, surprised:{quote:"Unexpected brings gifts.",exercise:"Notice 3 familiar things."}, fearful:{quote:"Fear passes.",exercise:"Take 5 breaths."}, disgusted:{quote:"Let it go.",exercise:"Listen to music."}};
-      return map[emotion] || {quote:"Stay mindful.", exercise:"Take a pause."};
-    }
-    async function analyzeMood() {
-      try { await startCamera(); } catch(e){ moodResult.textContent="Camera needed."; startMoodBtn.disabled=false; return; }
-      moodResult.textContent = "Analyzing for 4 seconds…";
-      startMoodBtn.disabled = true;
-      const collected = [];
-      const start = Date.now();
-      async function capture(){
-        const opts = new faceapi.TinyFaceDetectorOptions({ inputSize:512, scoreThreshold:0.5 });
-        const det = await faceapi.detectSingleFace(video, opts).withFaceExpressions();
-        if (det) collected.push(det.expressions);
-        if (Date.now() - start < 4000) requestAnimationFrame(capture);
-        else {
-          if (!collected.length){ moodResult.textContent="No face detected."; startMoodBtn.disabled=false; return; }
-          const avg = {};
-          collected.forEach(exp=>{ for (const [k,v] of Object.entries(exp)) avg[k]=(avg[k]||0)+v; });
-          for (const k in avg) avg[k] /= collected.length;
-          const { key, val } = topExpression(avg);
-          const msg = moodMessage(key);
-          moodResult.innerHTML = `<strong>Mood:</strong> ${key} (${(val*100).toFixed(1)}%)<br><span class="glow-text">${msg.quote}</span><div class="exercise">${msg.exercise}</div>`;
-          startMoodBtn.disabled = false;
-        }
-      }
-      capture();
-    }
-    startMoodBtn.addEventListener('click', analyzeMood);
-    loadModels();
+async function ask(question){
+  if(!question||!question.trim())return;
+  stopSpeaking();
+  answerEl.textContent="Thinking…";
+  try{
+    const res=await fetch(`${API_URL}?question=${encodeURIComponent(question)}`);
+    const data=await res.json();
+    const txt=(data&&data.answer)?data.answer:"No answer received.";
+    answerEl.innerHTML=`<span class="glow-text">${txt}</span>`;
+    speak(txt);
+  }catch(e){console.error("API error:",e);answerEl.textContent="Error connecting to API (check console).";}
+}
 
-    /*************** API ***************/
-    const answerEl = document.getElementById('answer');
-    async function ask(question){
-      if (!question) return;
-      stopSpeaking();
-      answerEl.textContent = "Thinking…";
-      try{
-        const res = await fetch(`${API_URL}?question=${encodeURIComponent(question)}`);
-        const data = await res.json();
-        const txt = (data && data.answer) ? data.answer : "No answer.";
-        answerEl.innerHTML = `<span class="glow-text">${txt}</span>`;
-        speak(txt);
-      }catch(e){ answerEl.textContent="API error."; }
-    }
+function sendText(){const q=textIn.value.trim();if(!q)return;ask(q);textIn.value="";}
+textIn.addEventListener('keydown', ev=>{if(ev.key==='Enter'){ev.preventDefault();sendText();}});
+sendBtn.addEventListener('click', sendText);
 
-    /*************** Hotkeys ***************/
-    document.addEventListener("keydown", (e)=>{
-      if (e.code === "F1") { e.preventDefault(); startMoodBtn.click(); }
-      if (e.code === "F2") { e.preventDefault(); startVoice.click(); }
-      if (e.code === "F3") { e.preventDefault(); stopAllBtn.click(); }
-    });
-  </script>
+function newRecognizer(isContinuous){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){alert("Speech recognition not supported."); return null;}
+  const r=new SR();
+  r.lang="en-US"; r.continuous=isContinuous; r.interimResults=false;
+  r.onresult=e=>{for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal){const transcript=e.results[i][0].transcript.trim(); if(transcript) ask(transcript);}}};
+  r.onerror=ev=>console.warn("SR error:",ev);
+  r.onend=()=>{if(isContinuous&&contModeActive){setTimeout(()=>{try{r.start();}catch(e){console.warn("Restart fail:",e);}},250);}};
+  return r;
+}
+
+const startVoice=document.getElementById('startVoice');
+startVoice.onclick=()=>{stopVoiceRec();rec=newRecognizer(false);if(rec){try{rec.start();}catch(e){console.warn(e);}}};
+
+const startCont=document.getElementById('startCont');
+function startContinuous(){stopVoiceRec();contModeActive=true;rec=newRecognizer(true);if(rec){try{rec.start();}catch(e){console.warn(e);}}}
+startCont.onclick=()=>startContinuous();
+
+function stopVoiceRec(){contModeActive=false; try{if(rec) rec.onend=null;}catch(e){} try{if(rec) rec.stop();}catch(e){} rec=null;}
+stopAllBtn.onclick=()=>{stopVoiceRec();stopSpeaking();};
+
+const video=document.getElementById('video'), canvas=document.getElementById('overlay'), moodResult=document.getElementById('moodResult'), startMoodBtn=document.getElementById('startMood');
+let stream=null; const MODEL_URL='https://cdn.jsdelivr.net/gh/vladmandic/face-api/model/';
+
+async function loadModels(){try{await Promise.all([faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)]);}catch(e){console.warn("Model load failed:",e);}}
+async function startCamera(){if(!stream){stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false});video.srcObject=stream;await video.play();} canvas.width=video.videoWidth||640; canvas.height=video.videoHeight||480;}
+
+function topExpression(expressions){let best={key:'neutral',val:0}; for(const [k,v] of Object.entries(expressions)) if(v>best.val) best={key:k,val:v}; return best;}
+function moodMessage(emotion){const map={angry:{quote:"I am in control of my emotions, not the other way around.",exercise:"Box Breathing: Inhale 4, hold 4, exhale 4, hold 4."},happy:{quote:"Happiness flows through me like a gentle river, endless and free.",exercise:"Think 3 things you're grateful for."},sad:{quote:"This feeling is temporary, brighter days are on their way.",exercise:"5-4-3-2-1 Grounding."},neutral:{quote:"Your calm presence is a quiet kind of beauty.",exercise:"Stretch your body lightly."},surprised:{quote:"Every unexpected moment carries a hidden gift.",exercise:"Notice 3 familiar things."},fearful:{quote:"Your fear is a passing cloud; your strength is the sky.",exercise:"Take 5 slow breaths."},disgusted:{quote:"What disturbs you doesn't have to stay within you.",exercise:"Listen to a calming song."}}; return map[emotion]||{quote:"Stay mindful.",exercise:"Take a short pause."};}
+
+async function analyzeMood(){try{await startCamera();}catch(e){moodResult.textContent="Camera access needed."; startMoodBtn.disabled=false; return;} moodResult.textContent="Analyzing for 4 seconds…"; startMoodBtn.disabled=true; const collected=[]; const start=Date.now(); async function capture(){const opts=new faceapi.TinyFaceDetectorOptions({inputSize:512,scoreThreshold:0.5}); const det=await faceapi.detectSingleFace(video,opts).withFaceExpressions(); if(det) collected.push(det.expressions); if(Date.now()-start<4000) requestAnimationFrame(capture); else{if(!collected.length){moodResult.textContent="No face detected."; startMoodBtn.disabled=false; return;} const avg={}; collected.forEach(exp=>{for(const [k,v] of Object.entries(exp)) avg[k]=(avg[k]||0)+v;}); for(const k in avg) avg[k]/=collected.length; const {key,val}=topExpression(avg); const msg=moodMessage(key); moodResult.innerHTML=`<strong>Mood:</strong> ${key} (${(val*100).toFixed(1)}%)<br><span class="glow-text">${msg.quote}</span><div class="exercise">${msg.exercise}</div>`; startMoodBtn.disabled=false;}} capture();}
+startMoodBtn.addEventListener('click',analyzeMood);
+loadModels();
+
+const toggleBtn=document.getElementById('toggleVoice'); let hidden=false;
+function updateToggleUI(){toggleBtn.textContent=hidden?"Show Assistant":"Hide Assistant";voiceCard.style.display=hidden?"none":"block";mainWrap.classList.toggle("solo",hidden);toggleBtn.classList.toggle('pulse',hidden);}
+toggleBtn.addEventListener('click',()=>{hidden=!hidden; updateToggleUI(); if(hidden){stopVoiceRec(); stopSpeaking();}});
+updateToggleUI();
+
+// Hotkeys: F1 - Mood, F2 - Start Voice, F3 - Stop
+document.addEventListener('keydown',e=>{
+  if(e.key==='F1'){e.preventDefault(); analyzeMood();}
+  if(e.key==='F2'){e.preventDefault(); startVoice.click();}
+  if(e.key==='F3'){e.preventDefault(); stopAllBtn.click();}
+});
+
+console.log("Aina frontend ready. Use Chrome/Edge with microphone permission for full features.");
+</script>
 </body>
 </html>
-
