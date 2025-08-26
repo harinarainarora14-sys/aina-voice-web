@@ -9,94 +9,125 @@
       font-family: Arial, sans-serif;
       display: flex;
       flex-direction: column;
-      align-items: center;
       justify-content: center;
+      align-items: center;
       height: 100vh;
       margin: 0;
-      background: #f4f4f4;
+      background: #f5f5f5;
     }
-    .container {
+    #chat {
       width: 90%;
-      max-width: 500px;
+      max-width: 600px;
+      height: 70vh;
+      overflow-y: auto;
       background: white;
-      padding: 20px;
       border-radius: 12px;
-      box-shadow: 0px 4px 12px rgba(0,0,0,0.1);
-    }
-    textarea {
-      width: 100%;
-      height: 100px;
-      border-radius: 8px;
-      border: 1px solid #ddd;
-      padding: 10px;
+      padding: 15px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
       margin-bottom: 10px;
-      font-size: 16px;
+    }
+    .message {
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 8px;
+      max-width: 80%;
+    }
+    .user {
+      background: #007bff;
+      color: white;
+      margin-left: auto;
+    }
+    .assistant {
+      background: #e4e6eb;
+      margin-right: auto;
+    }
+    #controls {
+      display: flex;
+      gap: 10px;
     }
     button {
       padding: 10px 15px;
-      border: none;
-      border-radius: 8px;
-      margin: 5px;
-      cursor: pointer;
       font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
     }
-    #sendBtn { background: #4CAF50; color: white; }
-    #micBtn { background: #2196F3; color: white; }
-    #speakBtn { background: #FF9800; color: white; }
-    #stopSpeakBtn { background: #f44336; color: white; }
+    #recordButton {
+      background: red;
+      color: white;
+    }
+    #stopButton {
+      background: gray;
+      color: white;
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h2>🎙️ Voice Assistant</h2>
-    <textarea id="userInput" placeholder="Ask me something..."></textarea><br>
-    <button id="sendBtn">Send</button>
-    <button id="micBtn">🎤</button>
-    <button id="speakBtn">🔊</button>
-    <button id="stopSpeakBtn">⏹️ Stop Speaking</button>
-    <p id="response"></p>
-    <br>
-    <label for="apiUrl">API URL: </label>
-    <input type="text" id="apiUrl" value="https://voice-assistant-api.onrender.com" style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;">
+  <div id="chat"></div>
+  <div id="controls">
+    <button id="recordButton">🎙️ Record</button>
+    <button id="stopButton" disabled>⏹ Stop</button>
   </div>
 
   <script>
-    const sendBtn = document.getElementById("sendBtn");
-    const micBtn = document.getElementById("micBtn");
-    const speakBtn = document.getElementById("speakBtn");
-    const stopSpeakBtn = document.getElementById("stopSpeakBtn");
-    const userInput = document.getElementById("userInput");
-    const responseEl = document.getElementById("response");
-    const apiUrlInput = document.getElementById("apiUrl");
+    const recordButton = document.getElementById("recordButton");
+    const stopButton = document.getElementById("stopButton");
+    const chatBox = document.getElementById("chat");
+    let mediaRecorder;
+    let audioChunks = [];
 
-    let utterance; // For speech synthesis
-
-    sendBtn.addEventListener("click", async () => {
-      const query = userInput.value;
-      const apiUrl = apiUrlInput.value;
-      if (!query) return;
-      const res = await fetch(`${apiUrl}/ask?query=${encodeURIComponent(query)}`);
-      const data = await res.json();
-      responseEl.textContent = data.answer || "I couldn't find anything.";
-      speakText(data.answer);
-    });
-
-    function speakText(text) {
-      if (utterance) window.speechSynthesis.cancel(); 
-      utterance = new SpeechSynthesisUtterance(text);
-      window.speechSynthesis.speak(utterance);
+    // Add message to chat
+    function addMessage(text, sender) {
+      const msg = document.createElement("div");
+      msg.classList.add("message", sender);
+      msg.textContent = text;
+      chatBox.appendChild(msg);
+      chatBox.scrollTop = chatBox.scrollHeight;
     }
 
-    speakBtn.addEventListener("click", () => {
-      const text = responseEl.textContent;
-      if (text) speakText(text);
+    // Recording start
+    recordButton.addEventListener("click", async () => {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+
+      mediaRecorder.ondataavailable = event => {
+        audioChunks.push(event.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
+        audioChunks = [];
+
+        const formData = new FormData();
+        formData.append("file", audioBlob, "recording.webm");
+
+        addMessage("🎤 Recording sent...", "user");
+
+        // Send to backend
+        const response = await fetch("http://127.0.0.1:8000/ask_audio/", {
+          method: "POST",
+          body: formData
+        });
+
+        const result = await response.json();
+        addMessage(result.response, "assistant");
+      };
+
+      mediaRecorder.start();
+      recordButton.disabled = true;
+      stopButton.disabled = false;
+      addMessage("🎙️ Recording started...", "user");
     });
 
-    stopSpeakBtn.addEventListener("click", () => {
-      window.speechSynthesis.cancel();
+    // Recording stop
+    stopButton.addEventListener("click", () => {
+      mediaRecorder.stop();
+      recordButton.disabled = false;
+      stopButton.disabled = true;
     });
   </script>
 </body>
 </html>
+
 
 
