@@ -23,13 +23,8 @@
       width:100%; max-width:1100px; display:flex; gap:24px;
       flex-wrap:wrap; justify-content:center; align-items:flex-start;
     }
-    /* When assistant is hidden */
-    .wrap.solo {
-      justify-content:center;
-    }
-    .wrap.solo .card#moodCard {
-      max-width:640px; width:100%;
-    }
+    .wrap.solo { justify-content:center; }
+    .wrap.solo .card#moodCard { max-width:640px; width:100%; }
 
     .card {
       background:var(--card); border-radius:16px; padding:20px;
@@ -75,14 +70,12 @@
 
     .hint { font-size:12px; opacity:.75; margin-top:6px; }
 
-    /* Floating toggle button */
     #toggleVoice {
       position:fixed; bottom:20px; right:20px; z-index:1000;
       background:var(--card); border:1px solid var(--btn-br);
       border-radius:20px; padding:10px 16px;
       box-shadow:0 4px 12px rgba(0,0,0,.4);
     }
-    /* small pulse when assistant hidden */
     #toggleVoice.pulse { animation: pulse 1.6s infinite; border-color:var(--glow1); }
     @keyframes pulse {
       0% { box-shadow:0 0 0 0 rgba(124,156,255,0.12); }
@@ -92,7 +85,6 @@
   </style>
 </head>
 <body>
-  <!-- Wrapper for Mood + Voice -->
   <div class="wrap" id="mainWrap">
     <!-- Mood Detector -->
     <div class="card" id="moodCard">
@@ -110,8 +102,6 @@
     <div class="card" id="voiceCard">
       <h1>Voice Assistant</h1>
       <div class="sub">Ask by typing, single voice shot, or continuous conversation.</div>
-
-      <!-- Mode Switch -->
       <div class="modebar">
         <button id="mText"   class="active">Text Mode</button>
         <button id="mVoice">Voice Chat</button>
@@ -119,8 +109,6 @@
         <div style="flex:1"></div>
         <button id="stopAll">⏹ Stop</button>
       </div>
-
-      <!-- Text Mode -->
       <div id="panelText" class="panel show">
         <div class="row" style="margin-bottom:8px; width:100%">
           <input id="textIn" type="text" placeholder="Type your message…" />
@@ -128,24 +116,14 @@
         </div>
         <div class="hint">Auto-speaks every reply. “Stop” cancels speech.</div>
       </div>
-
-      <!-- Voice Mode -->
       <div id="panelVoice" class="panel">
-        <div class="row">
-          <button id="startVoice">🎤 Start Listening</button>
-        </div>
+        <div class="row"><button id="startVoice">🎤 Start Listening</button></div>
         <div class="hint">Single utterance → answer → auto-speak.</div>
       </div>
-
-      <!-- Continuous Voice Mode -->
       <div id="panelCont" class="panel">
-        <div class="row">
-          <button id="startCont">🔄 Start Continuous</button>
-        </div>
+        <div class="row"><button id="startCont">🔄 Start Continuous</button></div>
         <div class="hint">Keeps listening and responding until you press Stop.</div>
       </div>
-
-      <!-- Answer -->
       <div id="answer" class="result answer">Ask something by text or voice.</div>
     </div>
   </div>
@@ -153,281 +131,91 @@
   <!-- Floating toggle button -->
   <button id="toggleVoice">Hide Assistant</button>
 
-  <!-- Face API & Voice logic -->
   <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
   <script>
     /*************** CONFIG ***************/
-    const API_URL = "https://voice-assistant-api-yya9.onrender.com/ask"; // update if needed
+    const API_URL = "https://voice-assistant-api-yya9.onrender.com/ask";
 
-    /*************** UTIL: TTS (auto-speak, cancel previous) ***************/
-    let audioUnlocked = false;
+    /*************** UTIL: TTS ***************/
     let currentUtterance = null;
+    function speak(text){ if (!text) return; speechSynthesis.cancel(); currentUtterance = new SpeechSynthesisUtterance(text); speechSynthesis.speak(currentUtterance); }
+    function stopSpeaking(){ try{ speechSynthesis.cancel(); }catch(e){} }
 
-    ["click","touchstart","pointerdown"].forEach(evt=>{
-      window.addEventListener(evt, () => {
-        if (!audioUnlocked) {
-          try {
-            const u = new SpeechSynthesisUtterance(" ");
-            u.volume = 0;
-            speechSynthesis.speak(u);
-          } catch(e){}
-          audioUnlocked = true;
-        }
-      }, { once:true });
-    });
-
-    function speak(text) {
-      if (!text) return;
-      try {
-        speechSynthesis.cancel();
-        currentUtterance = new SpeechSynthesisUtterance(text);
-        speechSynthesis.speak(currentUtterance);
-      } catch (e) {
-        console.warn("TTS error:", e);
-      }
-    }
-    function stopSpeaking() {
-      try { speechSynthesis.cancel(); } catch(e){}
-    }
-
-    /*************** VOICE ASSISTANT: Elements ***************/
-    const mText = document.getElementById('mText');
-    const mVoice = document.getElementById('mVoice');
-    const mCont  = document.getElementById('mCont');
-    const panelText = document.getElementById('panelText');
-    const panelVoice = document.getElementById('panelVoice');
-    const panelCont  = document.getElementById('panelCont');
-    const stopAllBtn = document.getElementById('stopAll');
-    const answerEl = document.getElementById('answer');
-    const textIn = document.getElementById('textIn');
-    const sendBtn = document.getElementById('sendBtn');
-
-    /*************** STATE & Recognition ***************/
-    let rec = null;
-    let contModeActive = false;
+    /*************** VOICE ASSISTANT ***************/
+    const mText=document.getElementById('mText'), mVoice=document.getElementById('mVoice'), mCont=document.getElementById('mCont');
+    const panelText=document.getElementById('panelText'), panelVoice=document.getElementById('panelVoice'), panelCont=document.getElementById('panelCont');
+    const stopAllBtn=document.getElementById('stopAll'), answerEl=document.getElementById('answer');
+    const textIn=document.getElementById('textIn'), sendBtn=document.getElementById('sendBtn');
+    let rec=null, contModeActive=false;
 
     function setMode(which){
       [mText,mVoice,mCont].forEach(b=>b.classList.remove('active'));
       [panelText,panelVoice,panelCont].forEach(p=>p.classList.remove('show'));
-      if (which==='text'){ mText.classList.add('active'); panelText.classList.add('show'); stopVoiceRec(); }
-      if (which==='voice'){ mVoice.classList.add('active'); panelVoice.classList.add('show'); stopVoiceRec(); }
-      if (which==='cont'){ mCont.classList.add('active'); panelCont.classList.add('show'); startContinuous(); }
+      if (which==='text'){mText.classList.add('active');panelText.classList.add('show');stopVoiceRec();}
+      if (which==='voice'){mVoice.classList.add('active');panelVoice.classList.add('show');stopVoiceRec();}
+      if (which==='cont'){mCont.classList.add('active');panelCont.classList.add('show');startContinuous();}
     }
-    mText.onclick = ()=> setMode('text');
-    mVoice.onclick= ()=> setMode('voice');
-    mCont.onclick = ()=> setMode('cont');
+    mText.onclick=()=>setMode('text'); mVoice.onclick=()=>setMode('voice'); mCont.onclick=()=>setMode('cont');
 
-    // API call helper
-    async function ask(question){
-      if (!question || !question.trim()) return;
-      stopSpeaking();
-      answerEl.textContent = "Thinking…";
-      try{
-        const res = await fetch(`${API_URL}?question=${encodeURIComponent(question)}`);
-        const data = await res.json();
-        const txt = (data && data.answer) ? data.answer : "No answer received.";
-        answerEl.innerHTML = `<span class="glow-text">${txt}</span>`;
-        speak(txt);
-      } catch(e){
-        console.error("API error:", e);
-        answerEl.textContent = "Error connecting to API (check console).";
-      }
+    async function ask(q){
+      if (!q.trim()) return;
+      stopSpeaking(); answerEl.textContent="Thinking…";
+      try{ const res=await fetch(`${API_URL}?question=${encodeURIComponent(q)}`);
+        const data=await res.json(); const txt=data.answer||"No answer."; 
+        answerEl.innerHTML=`<span class="glow-text">${txt}</span>`; speak(txt);
+      }catch(e){ answerEl.textContent="API error."; }
     }
+    function sendText(){const q=textIn.value.trim(); if(!q)return; ask(q); textIn.value="";}
+    textIn.addEventListener('keydown',ev=>{if(ev.key==='Enter'){ev.preventDefault();sendText();}});
+    sendBtn.onclick=sendText;
 
-    // sendText used by Enter and send button
-    function sendText(){
-      const q = textIn.value.trim();
-      if (!q) return;
-      ask(q);
-      textIn.value = "";
-    }
-    // wire Enter key on input
-    textIn.addEventListener('keydown', (ev)=>{
-      if (ev.key === 'Enter') { ev.preventDefault(); sendText(); }
-    });
-    sendBtn.addEventListener('click', sendText);
-
-    /*************** Speech Recognition helpers ***************/
     function newRecognizer(isContinuous){
-      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SR){
-        alert("Speech recognition not supported in this browser. Use Chrome/Edge on desktop or Android for full support.");
-        return null;
-      }
-      const r = new SR();
-      r.lang = "en-US";
-      r.continuous = isContinuous;
-      r.interimResults = false;
-
-      r.onresult = (e)=>{
-        for (let i=e.resultIndex; i<e.results.length; i++){
-          if (e.results[i].isFinal){
-            const transcript = e.results[i][0].transcript.trim();
-            if (transcript) ask(transcript);
-          }
-        }
-      };
-      r.onerror = (ev)=> console.warn("SR error:", ev);
-      r.onend = ()=>{
-        // auto-restart for continuous mode
-        if (isContinuous && contModeActive) {
-          // small delay to avoid rapid restart loops on some browsers
-          setTimeout(()=> {
-            try { r.start(); } catch(e){ console.warn("Restart fail:", e); }
-          }, 250);
-        }
-      };
+      const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+      if(!SR){alert("Speech recognition not supported.");return null;}
+      const r=new SR(); r.lang="en-US"; r.continuous=isContinuous; r.interimResults=false;
+      r.onresult=(e)=>{for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal){ask(e.results[i][0].transcript.trim());}}};
+      r.onend=()=>{if(isContinuous&&contModeActive){setTimeout(()=>{try{r.start();}catch(e){}},250);}};
       return r;
     }
-
-    // Single-shot voice
-    const startVoice = document.getElementById('startVoice');
-    startVoice.onclick = ()=>{
-      stopVoiceRec();
-      rec = newRecognizer(false);
-      if (rec) {
-        try { rec.start(); } catch(e){ console.warn(e); }
-      }
-    };
-
-    // Continuous
-    const startCont = document.getElementById('startCont');
-    function startContinuous(){
-      stopVoiceRec();
-      contModeActive = true;
-      rec = newRecognizer(true);
-      if (rec) {
-        try { rec.start(); } catch(e){ console.warn(e); }
-      }
-    }
-    startCont.onclick = ()=> startContinuous();
-
-    function stopVoiceRec(){
-      contModeActive = false;
-      try { if (rec) rec.onend = null; } catch(e){}
-      try { if (rec) rec.stop(); } catch(e){}
-      rec = null;
-    }
-
-    // Global stop button
-    stopAllBtn.onclick = ()=>{
-      stopVoiceRec();
-      stopSpeaking();
-      // keep the last answer visible (don't overwrite)
-    };
+    function stopVoiceRec(){contModeActive=false;try{if(rec)rec.onend=null;}catch(e){} try{if(rec)rec.stop();}catch(e){} rec=null;}
+    document.getElementById('startVoice').onclick=()=>{stopVoiceRec(); rec=newRecognizer(false); if(rec)rec.start();};
+    document.getElementById('startCont').onclick=()=>{stopVoiceRec(); contModeActive=true; rec=newRecognizer(true); if(rec)rec.start();};
+    stopAllBtn.onclick=()=>{stopVoiceRec(); stopSpeaking();};
 
     /*************** MOOD DETECTOR ***************/
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('overlay');
-    const moodResult = document.getElementById('moodResult');
-    const startMoodBtn = document.getElementById('startMood');
-    let stream = null;
-    const MODEL_URL = 'https://cdn.jsdelivr.net/gh/vladmandic/face-api/model/';
+    const video=document.getElementById('video'), canvas=document.getElementById('overlay'), moodResult=document.getElementById('moodResult'), startMoodBtn=document.getElementById('startMood');
+    let stream=null; const MODEL_URL='https://cdn.jsdelivr.net/gh/vladmandic/face-api/model/';
+    async function loadModels(){await Promise.all([faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL), faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)]);}
+    async function startCamera(){if(!stream){stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false}); video.srcObject=stream; await video.play();} canvas.width=video.videoWidth||640; canvas.height=video.videoHeight||480;}
+    function topExpression(exp){let best={key:'neutral',val:0}; for(const[k,v]of Object.entries(exp))if(v>best.val)best={key:k,val:v}; return best;}
+    function moodMessage(emotion){const map={angry:{quote:"I am in control of my emotions, not the other way around.",exercise:"Box Breathing."},happy:{quote:"Happiness flows through me like a gentle river, endless and free.",exercise:"Think 3 things you're grateful for."},sad:{quote:"This feeling is temporary, brighter days are on their way.",exercise:"5-4-3-2-1 Grounding."},neutral:{quote:"Your calm presence is a quiet kind of beauty.",exercise:"Stretch your body lightly."},surprised:{quote:"Every unexpected moment carries a hidden gift.",exercise:"Notice 3 familiar things."},fearful:{quote:"Your fear is a passing cloud; your strength is the sky.",exercise:"Take 5 slow breaths."},disgusted:{quote:"What disturbs you doesn't have to stay within you.",exercise:"Listen to a calming song."}}; return map[emotion]||{quote:"Stay mindful.",exercise:"Take a short pause."};}
+    async function analyzeMood(){await startCamera(); moodResult.textContent="Analyzing for 4 seconds…"; startMoodBtn.disabled=true; const collected=[], start=Date.now();
+      async function capture(){const det=await faceapi.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions({inputSize:512,scoreThreshold:0.5})).withFaceExpressions(); if(det)collected.push(det.expressions);
+        if(Date.now()-start<4000)requestAnimationFrame(capture); else{if(!collected.length){moodResult.textContent="No face detected."; startMoodBtn.disabled=false; return;}
+          const avg={}; collected.forEach(exp=>{for(const[k,v]of Object.entries(exp))avg[k]=(avg[k]||0)+v;}); for(const k in avg)avg[k]/=collected.length;
+          const{key,val}=topExpression(avg); const msg=moodMessage(key); moodResult.innerHTML=`<strong>Mood:</strong> ${key} (${(val*100).toFixed(1)}%)<br><span class="glow-text">${msg.quote}</span><div class="exercise">${msg.exercise}</div>`; startMoodBtn.disabled=false;}} capture();}
+    startMoodBtn.onclick=analyzeMood; loadModels();
 
-    async function loadModels() {
-      try {
-        await Promise.all([
-          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-          faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
-        ]);
-      } catch(e){ console.warn("Model load failed:", e); }
-    }
-
-    async function startCamera() {
-      if (!stream) {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
-        video.srcObject = stream;
-        await video.play();
-      }
-      // adjust canvas after metadata available
-      canvas.width = video.videoWidth || 640;
-      canvas.height = video.videoHeight || 480;
-    }
-
-    function topExpression(expressions) {
-      let best = { key: 'neutral', val: 0 };
-      for (const [k, v] of Object.entries(expressions)) if (v > best.val) best = { key:k, val:v };
-      return best;
-    }
-    function moodMessage(emotion) {
-      const map = {
-        angry:{quote:"I am in control of my emotions, not the other way around.",exercise:"Box Breathing: Inhale 4, hold 4, exhale 4, hold 4."},
-        happy:{quote:"Happiness flows through me like a gentle river, endless and free.",exercise:"Think 3 things you're grateful for."},
-        sad:{quote:"This feeling is temporary, brighter days are on their way.",exercise:"5-4-3-2-1 Grounding."},
-        neutral:{quote:"Your calm presence is a quiet kind of beauty.",exercise:"Stretch your body lightly."},
-        surprised:{quote:"Every unexpected moment carries a hidden gift.",exercise:"Notice 3 familiar things."},
-        fearful:{quote:"Your fear is a passing cloud; your strength is the sky.",exercise:"Take 5 slow breaths."},
-        disgusted:{quote:"What disturbs you doesn't have to stay within you.",exercise:"Listen to a calming song."},
-      };
-      return map[emotion] || {quote:"Stay mindful.", exercise:"Take a short pause."};
-    }
-
-    async function analyzeMood() {
-      try {
-        await startCamera();
-      } catch(e){
-        moodResult.textContent = "Camera access needed (allow camera).";
-        startMoodBtn.disabled = false;
-        return;
-      }
-      moodResult.textContent = "Analyzing for 4 seconds…";
-      startMoodBtn.disabled = true;
-
-      const collected = [];
-      const start = Date.now();
-
-      async function capture(){
-        const opts = new faceapi.TinyFaceDetectorOptions({ inputSize:512, scoreThreshold:0.5 });
-        const det = await faceapi.detectSingleFace(video, opts).withFaceExpressions();
-        if (det) collected.push(det.expressions);
-
-        if (Date.now() - start < 4000) requestAnimationFrame(capture);
-        else {
-          if (!collected.length) {
-            moodResult.textContent = "No face detected.";
-            startMoodBtn.disabled = false; return;
-          }
-          const avg = {};
-          collected.forEach(exp=>{
-            for (const [k,v] of Object.entries(exp)) avg[k] = (avg[k]||0)+v;
-          });
-          for (const k in avg) avg[k] /= collected.length;
-
-          const { key, val } = topExpression(avg);
-          const msg = moodMessage(key);
-          moodResult.innerHTML =
-            `<strong>Mood:</strong> ${key} (${(val*100).toFixed(1)}%)<br>
-             <span class="glow-text">${msg.quote}</span>
-             <div class="exercise">${msg.exercise}</div>`;
-          startMoodBtn.disabled = false;
-        }
-      }
-      capture();
-    }
-    startMoodBtn.addEventListener('click', analyzeMood);
-    loadModels();
-
-    /*************** Floating toggle button ***************/
-    const toggleBtn = document.getElementById('toggleVoice');
-    const voiceCard = document.getElementById('voiceCard');
-    const mainWrap = document.getElementById('mainWrap');
-    let hidden = false;
-    function updateToggleUI(){
-      toggleBtn.textContent = hidden ? "Show Assistant" : "Hide Assistant";
-      mainWrap.classList.toggle("solo", hidden);
-      toggleBtn.classList.toggle('pulse', hidden);
-    }
-    toggleBtn.addEventListener('click', ()=>{
-      hidden = !hidden;
-      voiceCard.style.display = hidden ? "none" : "block";
-      updateToggleUI();
-      // note: do NOT stop recognition here — it continues in background as requested
-    });
-    // init
+    /*************** Toggle Assistant ***************/
+    const toggleBtn=document.getElementById('toggleVoice'), voiceCard=document.getElementById('voiceCard'), mainWrap=document.getElementById('mainWrap');
+    let hidden=false;
+    function updateToggleUI(){toggleBtn.textContent=hidden?"Show Assistant":"Hide Assistant"; mainWrap.classList.toggle("solo",hidden); toggleBtn.classList.toggle('pulse',hidden);}
+    toggleBtn.onclick=()=>{hidden=!hidden; voiceCard.style.display=hidden?"none":"block"; updateToggleUI();};
     updateToggleUI();
 
-    /*************** Helpful console hints ***************/
-    console.log("Aina frontend ready. If speech recognition doesn't work: ensure you're using Chrome/Edge and that the page is served over HTTPS or localhost, and microphone permission is allowed.");
+    /*************** Keyboard Shortcuts ***************/
+    document.addEventListener('keydown',(e)=>{
+      switch(e.code){
+        case 'F1': // start listening
+          stopVoiceRec(); rec=newRecognizer(false); if(rec)rec.start(); answerEl.textContent="🎤 Listening…"; break;
+        case 'F2': // stop everything
+          stopVoiceRec(); stopSpeaking(); answerEl.textContent="⏹ Stopped."; break;
+        case 'F3': // mood detector
+          analyzeMood(); break;
+        case 'F4': // toggle assistant
+          hidden=!hidden; voiceCard.style.display=hidden?"none":"block"; updateToggleUI(); break;
+      }
+    });
   </script>
 </body>
 </html>
