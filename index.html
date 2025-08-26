@@ -65,8 +65,15 @@
     .panel.show{ display:block; }
     .answer { min-height:48px; }
 
-    /* tiny helper text */
     .hint { font-size:12px; opacity:.75; margin-top:6px; }
+
+    /* Floating toggle button */
+    #toggleVoice {
+      position:fixed; bottom:20px; right:20px; z-index:1000;
+      background:var(--card); border:1px solid var(--btn-br);
+      border-radius:20px; padding:10px 16px;
+      box-shadow:0 4px 12px rgba(0,0,0,.4);
+    }
   </style>
 </head>
 <body>
@@ -82,13 +89,10 @@
     <canvas id="overlay" style="display:none"></canvas>
   </div>
 
-  <!-- Voice Assistant wrapper with toggle -->
+  <!-- Voice Assistant -->
   <div class="wrap" id="voiceWrap">
     <div class="card" id="voiceCard">
-      <div class="row" style="justify-content:space-between; margin-bottom:10px">
-        <h1 style="margin:0">Voice Assistant</h1>
-        <button id="toggleVoice">Hide</button>
-      </div>
+      <h1>Voice Assistant</h1>
       <div class="sub">Ask by typing, single voice shot, or continuous conversation.</div>
 
       <!-- Mode Switch -->
@@ -131,21 +135,23 @@
     </div>
   </div>
 
-  <!-- Face API & Voice logic (same as before, only added toggle button JS) -->
+  <!-- Floating toggle button -->
+  <button id="toggleVoice">Hide Assistant</button>
+
+  <!-- JS -->
   <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
   <script>
-    /* ... existing JS from before (unchanged for mood + assistant) ... */
+    /* ... existing JS for mood + assistant ... */
 
-    // Toggle Voice Assistant (UI only, background runs)
+    // Toggle Voice Assistant (UI only)
     const toggleBtn = document.getElementById('toggleVoice');
     const voiceCard = document.getElementById('voiceCard');
     let hidden = false;
     toggleBtn.onclick = ()=>{
       hidden = !hidden;
       voiceCard.style.display = hidden ? "none" : "block";
-      toggleBtn.textContent = hidden ? "Show" : "Hide";
+      toggleBtn.textContent = hidden ? "Show Assistant" : "Hide Assistant";
     };
   </script>
 </body>
 </html>
-
