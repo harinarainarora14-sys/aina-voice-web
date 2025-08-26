@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Voice Assistant</title>
   <style>
     body {
@@ -16,81 +16,87 @@
       background: #f4f4f4;
     }
     .container {
+      width: 90%;
+      max-width: 500px;
       background: white;
       padding: 20px;
       border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-      width: 90%;
-      max-width: 400px;
-      text-align: center;
+      box-shadow: 0px 4px 12px rgba(0,0,0,0.1);
+    }
+    textarea {
+      width: 100%;
+      height: 100px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      padding: 10px;
+      margin-bottom: 10px;
+      font-size: 16px;
     }
     button {
-      padding: 10px 20px;
-      margin: 10px;
+      padding: 10px 15px;
       border: none;
       border-radius: 8px;
-      background: #007bff;
-      color: white;
-      font-size: 16px;
+      margin: 5px;
       cursor: pointer;
-    }
-    button:hover {
-      background: #0056b3;
-    }
-    input {
-      width: 100%;
-      padding: 10px;
-      margin-top: 10px;
-      border: 1px solid #ddd;
-      border-radius: 8px;
       font-size: 16px;
     }
+    #sendBtn { background: #4CAF50; color: white; }
+    #micBtn { background: #2196F3; color: white; }
+    #speakBtn { background: #FF9800; color: white; }
+    #stopSpeakBtn { background: #f44336; color: white; }
   </style>
 </head>
 <body>
   <div class="container">
     <h2>🎙️ Voice Assistant</h2>
-    <input id="userInput" type="text" placeholder="Ask me something..." />
-    <button onclick="sendMessage()">Send</button>
-    <button onclick="startListening()">🎙️ Speak</button>
-    <button onclick="stopSpeaking()">⏹ Stop</button>
-    <button onclick="speakResponse()">🔊 TTS</button>
+    <textarea id="userInput" placeholder="Ask me something..."></textarea><br>
+    <button id="sendBtn">Send</button>
+    <button id="micBtn">🎤</button>
+    <button id="speakBtn">🔊</button>
+    <button id="stopSpeakBtn">⏹️ Stop Speaking</button>
     <p id="response"></p>
+    <br>
+    <label for="apiUrl">API URL: </label>
+    <input type="text" id="apiUrl" value="https://voice-assistant-api.onrender.com" style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;">
   </div>
 
   <script>
-    let lastResponse = "";
+    const sendBtn = document.getElementById("sendBtn");
+    const micBtn = document.getElementById("micBtn");
+    const speakBtn = document.getElementById("speakBtn");
+    const stopSpeakBtn = document.getElementById("stopSpeakBtn");
+    const userInput = document.getElementById("userInput");
+    const responseEl = document.getElementById("response");
+    const apiUrlInput = document.getElementById("apiUrl");
 
-    async function sendMessage() {
-      const input = document.getElementById("userInput").value;
-      if (!input) return;
-      document.getElementById("response").innerText = "Thinking...";
+    let utterance; // For speech synthesis
 
-      try {
-        const res = await fetch("https://voice-assistant-api.onrender.com/ask?query=" + encodeURIComponent(input));
-        const data = await res.json();
-        lastResponse = data.answer || "Sorry, I couldn't understand.";
-        document.getElementById("response").innerText = lastResponse;
-      } catch (e) {
-        document.getElementById("response").innerText = "Error connecting to API.";
-      }
+    sendBtn.addEventListener("click", async () => {
+      const query = userInput.value;
+      const apiUrl = apiUrlInput.value;
+      if (!query) return;
+      const res = await fetch(`${apiUrl}/ask?query=${encodeURIComponent(query)}`);
+      const data = await res.json();
+      responseEl.textContent = data.answer || "I couldn't find anything.";
+      speakText(data.answer);
+    });
+
+    function speakText(text) {
+      if (utterance) window.speechSynthesis.cancel(); 
+      utterance = new SpeechSynthesisUtterance(text);
+      window.speechSynthesis.speak(utterance);
     }
 
-    function startListening() {
-      // 🔹 Future speech recognition code can be added here
-      alert("🎙️ Listening mode coming soon!");
-    }
+    speakBtn.addEventListener("click", () => {
+      const text = responseEl.textContent;
+      if (text) speakText(text);
+    });
 
-    function stopSpeaking() {
-      speechSynthesis.cancel();
-    }
-
-    function speakResponse() {
-      if (!lastResponse) return;
-      const utterance = new SpeechSynthesisUtterance(lastResponse);
-      utterance.lang = "en-US";
-      speechSynthesis.speak(utterance);
-    }
+    stopSpeakBtn.addEventListener("click", () => {
+      window.speechSynthesis.cancel();
+    });
   </script>
 </body>
 </html>
+
+
