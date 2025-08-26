@@ -22,6 +22,14 @@
       width:100%; max-width:1100px; display:flex; gap:24px;
       flex-wrap:wrap; justify-content:center; align-items:flex-start;
     }
+    /* When assistant is hidden */
+    .wrap.solo {
+      justify-content:center;
+    }
+    .wrap.solo .card#moodCard {
+      max-width:600px; width:100%;
+    }
+
     .card {
       background:var(--card); border-radius:16px; padding:20px;
       box-shadow:0 10px 30px rgba(0,0,0,.35);
@@ -58,13 +66,11 @@
     }
     .exercise { margin-top:8px; font-size:15px; color:var(--muted); text-shadow:0 0 8px rgba(124,156,255,.5); }
 
-    /* Voice Assistant sections */
     .modebar { display:flex; gap:8px; margin:8px 0 12px; }
     .modebar button.active { border-color:var(--glow1); transform:scale(1.03); }
     .panel { display:none; }
     .panel.show{ display:block; }
     .answer { min-height:48px; }
-
     .hint { font-size:12px; opacity:.75; margin-top:6px; }
 
     /* Floating toggle button */
@@ -77,34 +83,31 @@
   </style>
 </head>
 <body>
-  <!-- Mood Detector centered -->
-  <div class="card" style="max-width:500px; width:100%;">
-    <h1>Mood Detector</h1>
-    <div class="sub">Analyze your facial expression for 4 seconds.</div>
-    <div class="row">
-      <button id="startMood">Start</button>
+  <!-- Wrapper for Mood + Voice -->
+  <div class="wrap" id="mainWrap">
+    <!-- Mood Detector -->
+    <div class="card" id="moodCard">
+      <h1>Mood Detector</h1>
+      <div class="sub">Analyze your facial expression for 4 seconds.</div>
+      <div class="row">
+        <button id="startMood">Start</button>
+      </div>
+      <div id="moodResult" class="result">Press Start to analyze your mood.</div>
+      <video id="video" autoplay muted playsinline style="display:none"></video>
+      <canvas id="overlay" style="display:none"></canvas>
     </div>
-    <div id="moodResult" class="result">Press Start to analyze your mood.</div>
-    <video id="video" autoplay muted playsinline style="display:none"></video>
-    <canvas id="overlay" style="display:none"></canvas>
-  </div>
 
-  <!-- Voice Assistant -->
-  <div class="wrap" id="voiceWrap">
+    <!-- Voice Assistant -->
     <div class="card" id="voiceCard">
       <h1>Voice Assistant</h1>
       <div class="sub">Ask by typing, single voice shot, or continuous conversation.</div>
-
-      <!-- Mode Switch -->
       <div class="modebar">
-        <button id="mText"   class="active">Text Mode</button>
+        <button id="mText" class="active">Text Mode</button>
         <button id="mVoice">Voice Chat</button>
         <button id="mCont">Voice Continuous</button>
         <div style="flex:1"></div>
         <button id="stopAll">⏹ Stop</button>
       </div>
-
-      <!-- Text Mode -->
       <div id="panelText" class="panel show">
         <div class="row" style="margin-bottom:8px">
           <input id="textIn" placeholder="Type your message…"
@@ -113,24 +116,14 @@
         </div>
         <div class="hint">Auto-speaks every reply. “Stop” cancels speech.</div>
       </div>
-
-      <!-- Voice Mode -->
       <div id="panelVoice" class="panel">
-        <div class="row">
-          <button id="startVoice">🎤 Start Listening</button>
-        </div>
+        <div class="row"><button id="startVoice">🎤 Start Listening</button></div>
         <div class="hint">Single utterance → answer → auto-speak.</div>
       </div>
-
-      <!-- Continuous Voice Mode -->
       <div id="panelCont" class="panel">
-        <div class="row">
-          <button id="startCont">🔄 Start Continuous</button>
-        </div>
+        <div class="row"><button id="startCont">🔄 Start Continuous</button></div>
         <div class="hint">Keeps listening and responding until you press Stop.</div>
       </div>
-
-      <!-- Answer -->
       <div id="answer" class="result answer">Ask something by text or voice.</div>
     </div>
   </div>
@@ -146,10 +139,12 @@
     // Toggle Voice Assistant (UI only)
     const toggleBtn = document.getElementById('toggleVoice');
     const voiceCard = document.getElementById('voiceCard');
+    const mainWrap = document.getElementById('mainWrap');
     let hidden = false;
     toggleBtn.onclick = ()=>{
       hidden = !hidden;
       voiceCard.style.display = hidden ? "none" : "block";
+      mainWrap.classList.toggle("solo", hidden);
       toggleBtn.textContent = hidden ? "Show Assistant" : "Hide Assistant";
     };
   </script>
