@@ -177,16 +177,13 @@ startCont.onclick=()=>startContinuous();
 function stopVoiceRec(){ contModeActive=false; try{ if(rec) rec.onend=null; }catch(e){} try{ if(rec) rec.stop(); }catch(e){} rec=null; }
 stopAllBtn.onclick=()=>{ stopVoiceRec(); stopSpeaking(); };
 
-// Mood Detector
+// Mood Detector (unchanged)
 const video=document.getElementById('video'), canvas=document.getElementById('overlay'), moodResult=document.getElementById('moodResult'), startMoodBtn=document.getElementById('startMood');
 let stream=null; const MODEL_URL='https://cdn.jsdelivr.net/gh/vladmandic/face-api/model/';
-
 async function loadModels(){ try{ await Promise.all([ faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL), faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL) ]);}catch(e){ console.warn("Model load failed:",e);} }
 async function startCamera(){ if(!stream){ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false}); video.srcObject=stream; await video.play(); } canvas.width=video.videoWidth||640; canvas.height=video.videoHeight||480; }
-
 function topExpression(expressions){ let best={key:'neutral',val:0}; for(const [k,v] of Object.entries(expressions)) if(v>best.val) best={key:k,val:v}; return best; }
 function moodMessage(emotion){ const map={ angry:{quote:"I am in control of my emotions, not the other way around.",exercise:"Box Breathing: Inhale 4, hold 4, exhale 4, hold 4."}, happy:{quote:"Happiness flows through me like a gentle river, endless and free.",exercise:"Think 3 things you're grateful for."}, sad:{quote:"This feeling is temporary, brighter days are on their way.",exercise:"5-4-3-2-1 Grounding."}, neutral:{quote:"Your calm presence is a quiet kind of beauty.",exercise:"Stretch your body lightly."}, surprised:{quote:"Every unexpected moment carries a hidden gift.",exercise:"Notice 3 familiar things."}, fearful:{quote:"Your fear is a passing cloud; your strength is the sky.",exercise:"Take 5 slow breaths."}, disgusted:{quote:"What disturbs you doesn't have to stay within you.",exercise:"Listen to a calming song."}}; return map[emotion]||{quote:"Stay mindful.",exercise:"Take a short pause."}; }
-
 async function analyzeMood(){
   try{ await startCamera(); } catch(e){ moodResult.textContent="Camera access needed."; startMoodBtn.disabled=false; return; }
   moodResult.textContent="Analyzing for 4 seconds…"; startMoodBtn.disabled=true; 
@@ -210,10 +207,10 @@ async function analyzeMood(){
 startMoodBtn.addEventListener('click',analyzeMood);
 loadModels();
 
-// Toggle assistant
+// Toggle assistant – FIXED: no stopping of speech/voice
 const toggleBtn=document.getElementById('toggleVoice'); let hidden=false;
 function updateToggleUI(){ toggleBtn.textContent=hidden?"Show Assistant":"Hide Assistant"; voiceCard.style.display=hidden?"none":"block"; mainWrap.classList.toggle("solo",hidden); toggleBtn.classList.toggle('pulse',hidden); }
-toggleBtn.addEventListener('click',()=>{ hidden=!hidden; updateToggleUI(); if(hidden){ stopVoiceRec(); stopSpeaking(); }});
+toggleBtn.addEventListener('click',()=>{ hidden=!hidden; updateToggleUI(); /* no stopVoiceRec() or stopSpeaking() */ });
 updateToggleUI();
 
 // Hotkeys: F1 - Mood, F2 - Start Voice, F3 - Stop
