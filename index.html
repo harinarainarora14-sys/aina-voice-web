@@ -111,7 +111,6 @@
       <div id="panelVoice" class="panel">
         <div class="row">
           <button id="startVoice">🎤 Start Listening</button>
-          <button id="stopVoice">⏹ Stop</button>
         </div>
         <div class="hint">Single utterance → answer → auto-speak.</div>
       </div>
@@ -120,7 +119,6 @@
       <div id="panelCont" class="panel">
         <div class="row">
           <button id="startCont">🔄 Start Continuous</button>
-          <button id="stopCont">⏹ Stop</button>
         </div>
         <div class="hint">Keeps listening and responding until you press Stop.</div>
       </div>
@@ -141,24 +139,24 @@
     let currentUtterance = null;
 
     // iOS/Android: unlock audio on first user gesture
-    window.addEventListener('click', () => {
-      if (!audioUnlocked) {
-        try {
-          const u = new SpeechSynthesisUtterance(" ");
-          u.volume = 0; // silent unlock
-          speechSynthesis.speak(u);
-        } catch(e){}
-        audioUnlocked = true;
-      }
-    }, { once:true });
+    ["click","touchstart"].forEach(evt=>{
+      window.addEventListener(evt, () => {
+        if (!audioUnlocked) {
+          try {
+            const u = new SpeechSynthesisUtterance(" ");
+            u.volume = 0; // silent unlock
+            speechSynthesis.speak(u);
+          } catch(e){}
+          audioUnlocked = true;
+        }
+      }, { once:true });
+    });
 
     function speak(text) {
       if (!text) return;
       try {
         if (speechSynthesis.speaking) speechSynthesis.cancel();
         currentUtterance = new SpeechSynthesisUtterance(text);
-        // You can adjust these if you want:
-        // currentUtterance.rate = 1; currentUtterance.pitch = 1; currentUtterance.volume = 1;
         speechSynthesis.speak(currentUtterance);
       } catch (e) {
         console.warn("TTS error:", e);
@@ -191,14 +189,15 @@
 
     // API call helper
     async function ask(question){
-      stopSpeaking(); // cancel any ongoing speech before new request
+      stopSpeaking();
+      if(!question.trim()) return;
       answerEl.textContent = "Thinking…";
       try{
         const res = await fetch(`${API_URL}?question=${encodeURIComponent(question)}`);
         const data = await res.json();
         const txt = (data && data.answer) ? data.answer : "No answer received.";
         answerEl.innerHTML = `<span class="glow-text">${txt}</span>`;
-        speak(txt); // auto-speak every reply
+        speak(txt);
       } catch(e){
         console.error(e);
         answerEl.textContent = "Error connecting to API.";
@@ -227,7 +226,6 @@
       r.interimResults = false;
 
       r.onresult = (e)=>{
-        // Handle possibly multiple results (esp. in continuous)
         for (let i=e.resultIndex; i<e.results.length; i++){
           if (e.results[i].isFinal){
             const transcript = e.results[i][0].transcript;
@@ -238,7 +236,6 @@
       r.onerror = (e)=> console.warn("SR error:", e);
       r.onend = ()=>{
         if (contModeActive) {
-          // restart seamlessly in continuous mode
           try { r.start(); } catch(e){}
         }
       };
@@ -247,37 +244,33 @@
 
     // Single-shot voice
     const startVoice = document.getElementById('startVoice');
-    const stopVoice  = document.getElementById('stopVoice');
     startVoice.onclick = ()=>{
       stopVoiceRec();
       rec = newRecognizer(false);
       if (rec) rec.start();
     };
-    stopVoice.onclick = ()=> stopVoiceRec();
 
     // Continuous
     const startCont = document.getElementById('startCont');
-    const stopCont  = document.getElementById('stopCont');
     function startContinuous(){
       stopVoiceRec();
       contModeActive = true;
       rec = newRecognizer(true);
       if (rec) rec.start();
     }
+    startCont.onclick = ()=> startContinuous();
+
     function stopVoiceRec(){
       contModeActive = false;
       try { if (rec) rec.onend = null; } catch(e){}
       try { if (rec) rec.stop(); } catch(e){}
       rec = null;
     }
-    startCont.onclick = ()=> startContinuous();
-    stopCont.onclick  = ()=> stopVoiceRec();
 
-    // Global stop button: stops recognition + speech
+    // Global stop button
     stopAllBtn.onclick = ()=>{
       stopVoiceRec();
       stopSpeaking();
-      answerEl.textContent = "Stopped.";
     };
 
     /*************** MOOD DETECTOR (unchanged logic, Aina style) ***************/
