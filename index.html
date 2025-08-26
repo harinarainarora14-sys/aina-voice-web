@@ -1,161 +1,268 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Voice Assistant</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Aina + Voice Assistant</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #f8f9fa;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-    }
-    .container {
-      width: 95%;
-      max-width: 500px;
-      background: #fff;
-      padding: 20px;
-      border-radius: 15px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      background: #0b1020;
+      color: #e7ebf3;
+      font-family: system-ui, sans-serif;
       display: flex;
       flex-direction: column;
+      align-items: center;
+      gap: 30px;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    .card {
+      background: #121a33;
+      padding: 20px;
+      border-radius: 16px;
+      max-width: 520px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
     }
     h1 {
-      text-align: center;
-      font-size: 1.5rem;
-      margin-bottom: 20px;
-    }
-    textarea {
-      width: 100%;
-      height: 100px;
-      border: 1px solid #ccc;
-      border-radius: 10px;
-      padding: 10px;
-      resize: none;
-      font-size: 1rem;
       margin-bottom: 15px;
     }
     button {
-      padding: 10px;
-      margin: 5px 0;
-      border: none;
-      border-radius: 10px;
-      background: #007bff;
-      color: white;
-      font-size: 1rem;
+      background: #0c1329;
+      color: #e7ebf3;
+      border: 1px solid rgba(255,255,255,.1);
+      padding: 10px 16px;
+      border-radius: 12px;
       cursor: pointer;
-      width: 100%;
+      font-size: 14px;
+      margin: 6px;
+      transition: all 0.2s ease;
     }
     button:hover {
-      background: #0056b3;
+      border-color: #7c9cff;
+      transform: scale(1.05);
     }
-    .mode-buttons, .control-buttons {
-      display: flex;
-      flex-direction: column;
-    }
-    #response {
-      margin-top: 15px;
-      padding: 15px;
+    input {
+      padding: 10px;
       border-radius: 10px;
-      background: #f1f1f1;
-      min-height: 60px;
-      font-size: 1rem;
+      border: 1px solid rgba(255,255,255,.2);
+      background: #0c1329;
+      color: #e7ebf3;
+      margin: 8px;
+      width: 80%;
+    }
+    .result {
+      margin-top: 20px;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+    .glow-text {
+      font-size: 18px;
+      font-weight: 600;
+      background: linear-gradient(90deg, #7c9cff, #b9e0ff, #7c9cff);
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: glow 3s infinite alternate;
+    }
+    @keyframes glow {
+      from { text-shadow: 0 0 10px #7c9cff, 0 0 20px #7c9cff; }
+      to { text-shadow: 0 0 20px #b9e0ff, 0 0 30px #7c9cff; }
+    }
+    .exercise {
+      margin-top: 10px;
+      font-size: 15px;
+      color: #cfd8f3;
+      text-shadow: 0 0 8px rgba(124,156,255,0.5);
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Voice Assistant</h1>
-    
-    <!-- Text Input -->
-    <textarea id="textInput" placeholder="Type your question..."></textarea>
-    <button onclick="sendText()">Send</button>
-    
-    <!-- Mode Buttons -->
-    <div class="mode-buttons">
-      <button onclick="startVoiceMode()">🎙️ Voice Mode</button>
-      <button onclick="startContinuousMode()">🔊 Continuous Mode</button>
-    </div>
-    
-    <!-- Stop Button -->
-    <div class="control-buttons">
-      <button onclick="stopAll()">⏹️ Stop</button>
-    </div>
-
-    <!-- Response -->
-    <div id="response">Ask me something...</div>
+  <!-- Mood Detector -->
+  <div class="card">
+    <h1>Mood Detector</h1>
+    <button id="startBtn">Start</button>
+    <div id="result" class="result">Press start to analyze your mood</div>
   </div>
 
+  <video id="video" autoplay muted playsinline style="display:none"></video>
+  <canvas id="overlay" style="display:none"></canvas>
+
+  <!-- Voice Assistant -->
+  <div class="card">
+    <h1>Voice Assistant</h1>
+    <input type="text" id="textInput" placeholder="Type your question..." />
+    <button id="askBtn">Ask</button>
+    <br>
+    <button id="startVoiceBtn">🎤 Start Listening</button>
+    <button id="stopVoiceBtn">⏹ Stop</button>
+    <button id="continuousBtn">🔄 Continuous Mode</button>
+    <div id="answer" class="result">Ask something by text or voice</div>
+  </div>
+
+  <!-- Face API -->
+  <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
+
   <script>
+    // ===================== Mood Detector =====================
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('overlay');
+    const ctx = canvas.getContext('2d');
+    const resultEl = document.getElementById('result');
+    const startBtn = document.getElementById('startBtn');
+    let stream = null;
+
+    const MODEL_URL = 'https://cdn.jsdelivr.net/gh/vladmandic/face-api/model/';
+
+    async function loadModels() {
+      await Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+        faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
+      ]);
+    }
+
+    async function startCamera() {
+      if (!stream) {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+        video.srcObject = stream;
+        await video.play();
+      }
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+    }
+
+    function topExpression(expressions) {
+      let best = { key: 'neutral', val: 0 };
+      for (const [key, val] of Object.entries(expressions)) {
+        if (val > best.val) best = { key, val };
+      }
+      return best;
+    }
+
+    function getMessage(emotion) {
+      const map = {
+        angry: { quote: "I am in control of my emotions, not the other way around.", exercise: "Box Breathing: Inhale 4, hold 4, exhale 4, hold 4." },
+        happy: { quote: "Happiness flows through me like a gentle river, endless and free.", exercise: "Think 3 things you're grateful for." },
+        sad: { quote: "This feeling is temporary, brighter days are on their way.", exercise: "5-4-3-2-1 Grounding: Look around you." },
+        neutral: { quote: "Your calm presence is a quiet kind of beauty.", exercise: "Stretch your body lightly." },
+        surprised: { quote: "Every unexpected moment carries a hidden gift.", exercise: "Notice 3 familiar things nearby." },
+        fearful: { quote: "Your fear is only a passing cloud, your strength is the endless sky.", exercise: "Take 5 slow breaths." },
+        disgusted: { quote: "What disturbs you doesn't have to stay within you.", exercise: "Listen to a calming song." },
+      };
+      return map[emotion] || { quote: "Stay mindful.", exercise: "Take a short pause." };
+    }
+
+    async function analyze() {
+      await startCamera();
+      resultEl.textContent = "Analyzing for 4 seconds…";
+      startBtn.style.display = "none";
+
+      let collected = [];
+      const startTime = Date.now();
+
+      async function capture() {
+        const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 512, scoreThreshold: 0.5 });
+        const res = await faceapi.detectSingleFace(video, options).withFaceExpressions();
+        if (res) collected.push(res.expressions);
+
+        if (Date.now() - startTime < 4000) {
+          requestAnimationFrame(capture);
+        } else {
+          if (collected.length === 0) {
+            resultEl.textContent = "No face detected.";
+            startBtn.style.display = "inline-block";
+            return;
+          }
+
+          const avg = {};
+          collected.forEach(exp => {
+            for (const [k, v] of Object.entries(exp)) {
+              avg[k] = (avg[k] || 0) + v;
+            }
+          });
+          for (const k in avg) avg[k] /= collected.length;
+
+          const { key, val } = topExpression(avg);
+          const msg = getMessage(key);
+
+          resultEl.innerHTML = `<strong>Mood:</strong> ${key} (${(val*100).toFixed(1)}%)<br><span class="glow-text">${msg.quote}</span><br><div class="exercise">${msg.exercise}</div>`;
+          startBtn.style.display = "inline-block";
+        }
+      }
+
+      capture();
+    }
+
+    startBtn.addEventListener('click', analyze);
+    loadModels();
+
+    // ===================== Voice Assistant =====================
+    const textInput = document.getElementById('textInput');
+    const askBtn = document.getElementById('askBtn');
+    const startVoiceBtn = document.getElementById('startVoiceBtn');
+    const stopVoiceBtn = document.getElementById('stopVoiceBtn');
+    const continuousBtn = document.getElementById('continuousBtn');
+    const answerEl = document.getElementById('answer');
+
     let recognition;
     let continuousMode = false;
-    let speaking = false;
-    let synth = window.speechSynthesis;
 
-    async function sendText() {
-      stopAll();
-      let text = document.getElementById("textInput").value;
-      if (!text) return;
+    const API_URL = "https://voice-assistant-api-yya9.onrender.com/ask";
 
-      document.getElementById("response").innerText = "Thinking...";
-      let res = await fetch("https://voice-assistant-api.onrender.com/ask", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: text })
-      });
-
-      let data = await res.json();
-      document.getElementById("response").innerText = data.answer;
-      speakText(data.answer);
+    async function askQuestion(question) {
+      answerEl.textContent = "Thinking...";
+      try {
+        const res = await fetch(`${API_URL}?question=${encodeURIComponent(question)}`);
+        const data = await res.json();
+        answerEl.innerHTML = `<span class="glow-text">${data.answer}</span>`;
+      } catch (err) {
+        answerEl.textContent = "Error connecting to API.";
+      }
     }
 
-    function startVoiceMode() {
-      stopAll();
-      recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    askBtn.addEventListener('click', () => {
+      const q = textInput.value.trim();
+      if (q) askQuestion(q);
+    });
+
+    function startRecognition(isContinuous=false) {
+      if (!('webkitSpeechRecognition' in window)) {
+        alert("Speech recognition not supported in this browser");
+        return;
+      }
+      recognition = new webkitSpeechRecognition();
       recognition.lang = "en-US";
+      recognition.continuous = isContinuous;
       recognition.interimResults = false;
-      recognition.onresult = async (event) => {
-        let text = event.results[0][0].transcript;
-        document.getElementById("textInput").value = text;
-        await sendText();
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        askQuestion(transcript);
+        if (isContinuous) recognition.start(); // restart for continuous mode
       };
+
+      recognition.onerror = (e) => {
+        console.error(e);
+      };
+
       recognition.start();
     }
 
-    function startContinuousMode() {
-      stopAll();
-      continuousMode = true;
-      recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-      recognition.lang = "en-US";
-      recognition.continuous = true;
-      recognition.interimResults = false;
-      recognition.onresult = async (event) => {
-        let text = event.results[event.results.length - 1][0].transcript;
-        document.getElementById("textInput").value = text;
-        await sendText();
-      };
-      recognition.start();
-    }
-
-    function speakText(text) {
-      if (synth.speaking) synth.cancel();
-      let utterance = new SpeechSynthesisUtterance(text);
-      synth.speak(utterance);
-      speaking = true;
-      utterance.onend = () => speaking = false;
-    }
-
-    function stopAll() {
-      if (recognition) recognition.stop();
-      if (synth.speaking) synth.cancel();
+    startVoiceBtn.addEventListener('click', () => {
       continuousMode = false;
-      speaking = false;
-    }
+      startRecognition(false);
+    });
+
+    continuousBtn.addEventListener('click', () => {
+      continuousMode = true;
+      startRecognition(true);
+    });
+
+    stopVoiceBtn.addEventListener('click', () => {
+      if (recognition) recognition.stop();
+      answerEl.textContent = "Stopped listening.";
+    });
   </script>
 </body>
 </html>
