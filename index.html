@@ -95,9 +95,7 @@ const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 if (isIOS) {
   function unlockAudio() {
     if (!audioUnlocked) {
-      try {
-        const u = new SpeechSynthesisUtterance(""); u.volume = 0; speechSynthesis.speak(u);
-      } catch(e){}
+      try { const u = new SpeechSynthesisUtterance(""); u.volume = 0; speechSynthesis.speak(u); } catch(e){}
       audioUnlocked = true;
       while(speechQueue.length) speak(speechQueue.shift());
     }
@@ -155,6 +153,84 @@ function newRecognizer(isContinuous){
   if(!SR){alert("Speech recognition not supported."); return null;}
   const r=new SR();
   r.lang="en-US"; r.continuous=isContinuous; r.interimResults=false;
-  r.onresult=e=>{for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal){const transcript=e.results[i][0].transcript.trim(); if(transcript) ask(transcript);}}};
+  r.onresult=e=>{
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      if(e.results[i].isFinal){
+        const transcript=e.results[i][0].transcript.trim();
+        if(transcript) ask(transcript);
+      }
+    }
+  };
   r.onerror=ev=>console.warn("SR error:",ev);
-  r.onend=()=>
+  r.onend=()=>{ 
+    if(isContinuous && contModeActive){
+      setTimeout(()=>{ try{ r.start(); }catch(e){ console.warn("Restart fail:",e);} },250);
+    }
+  };
+  return r;
+}
+
+const startVoice=document.getElementById('startVoice');
+startVoice.onclick=()=>{
+  stopVoiceRec();
+  rec=newRecognizer(false);
+  if(rec) try{ rec.start(); } catch(e){ console.warn(e); }
+};
+
+const startCont=document.getElementById('startCont');
+function startContinuous(){ stopVoiceRec(); contModeActive=true; rec=newRecognizer(true); if(rec) try{ rec.start(); } catch(e){ console.warn(e);} }
+startCont.onclick=()=>startContinuous();
+
+function stopVoiceRec(){ contModeActive=false; try{ if(rec) rec.onend=null; }catch(e){} try{ if(rec) rec.stop(); }catch(e){} rec=null; }
+stopAllBtn.onclick=()=>{ stopVoiceRec(); stopSpeaking(); };
+
+// Mood Detector
+const video=document.getElementById('video'), canvas=document.getElementById('overlay'), moodResult=document.getElementById('moodResult'), startMoodBtn=document.getElementById('startMood');
+let stream=null; const MODEL_URL='https://cdn.jsdelivr.net/gh/vladmandic/face-api/model/';
+
+async function loadModels(){ try{ await Promise.all([ faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL), faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL) ]);}catch(e){ console.warn("Model load failed:",e);} }
+async function startCamera(){ if(!stream){ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false}); video.srcObject=stream; await video.play(); } canvas.width=video.videoWidth||640; canvas.height=video.videoHeight||480; }
+
+function topExpression(expressions){ let best={key:'neutral',val:0}; for(const [k,v] of Object.entries(expressions)) if(v>best.val) best={key:k,val:v}; return best; }
+function moodMessage(emotion){ const map={ angry:{quote:"I am in control of my emotions, not the other way around.",exercise:"Box Breathing: Inhale 4, hold 4, exhale 4, hold 4."}, happy:{quote:"Happiness flows through me like a gentle river, endless and free.",exercise:"Think 3 things you're grateful for."}, sad:{quote:"This feeling is temporary, brighter days are on their way.",exercise:"5-4-3-2-1 Grounding."}, neutral:{quote:"Your calm presence is a quiet kind of beauty.",exercise:"Stretch your body lightly."}, surprised:{quote:"Every unexpected moment carries a hidden gift.",exercise:"Notice 3 familiar things."}, fearful:{quote:"Your fear is a passing cloud; your strength is the sky.",exercise:"Take 5 slow breaths."}, disgusted:{quote:"What disturbs you doesn't have to stay within you.",exercise:"Listen to a calming song."}}; return map[emotion]||{quote:"Stay mindful.",exercise:"Take a short pause."}; }
+
+async function analyzeMood(){
+  try{ await startCamera(); } catch(e){ moodResult.textContent="Camera access needed."; startMoodBtn.disabled=false; return; }
+  moodResult.textContent="Analyzing for 4 seconds…"; startMoodBtn.disabled=true; 
+  const collected=[]; const start=Date.now(); 
+  async function capture(){
+    const opts=new faceapi.TinyFaceDetectorOptions({inputSize:512,scoreThreshold:0.5});
+    const det=await faceapi.detectSingleFace(video,opts).withFaceExpressions();
+    if(det) collected.push(det.expressions);
+    if(Date.now()-start<4000) requestAnimationFrame(capture);
+    else{
+      if(!collected.length){ moodResult.textContent="No face detected."; startMoodBtn.disabled=false; return; }
+      const avg={}; collected.forEach(exp=>{ for(const [k,v] of Object.entries(exp)) avg[k]=(avg[k]||0)+v; });
+      for(const k in avg) avg[k]/=collected.length;
+      const {key,val}=topExpression(avg); const msg=moodMessage(key);
+      moodResult.innerHTML=`<strong>Mood:</strong> ${key} (${(val*100).toFixed(1)}%)<br><span class="glow-text">${msg.quote}</span><div class="exercise">${msg.exercise}</div>`;
+      startMoodBtn.disabled=false;
+    }
+  }
+  capture();
+}
+startMoodBtn.addEventListener('click',analyzeMood);
+loadModels();
+
+// Toggle assistant
+const toggleBtn=document.getElementById('toggleVoice'); let hidden=false;
+function updateToggleUI(){ toggleBtn.textContent=hidden?"Show Assistant":"Hide Assistant"; voiceCard.style.display=hidden?"none":"block"; mainWrap.classList.toggle("solo",hidden); toggleBtn.classList.toggle('pulse',hidden); }
+toggleBtn.addEventListener('click',()=>{ hidden=!hidden; updateToggleUI(); if(hidden){ stopVoiceRec(); stopSpeaking(); }});
+updateToggleUI();
+
+// Hotkeys: F1 - Mood, F2 - Start Voice, F3 - Stop
+document.addEventListener('keydown',e=>{
+  if(e.key==='F1'){ e.preventDefault(); analyzeMood(); }
+  if(e.key==='F2'){ e.preventDefault(); startVoice.click(); }
+  if(e.key==='F3'){ e.preventDefault(); stopAllBtn.click(); }
+});
+
+console.log("Aina frontend ready. iOS supported for TTS. Use Chrome/Edge/Safari with microphone permission for full features.");
+</script>
+</body>
+</html>
