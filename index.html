@@ -177,7 +177,7 @@ startCont.onclick=()=>startContinuous();
 function stopVoiceRec(){ contModeActive=false; try{ if(rec) rec.onend=null; }catch(e){} try{ if(rec) rec.stop(); }catch(e){} rec=null; }
 stopAllBtn.onclick=()=>{ stopVoiceRec(); stopSpeaking(); };
 
-// Mood Detector (unchanged)
+// Mood Detector
 const video=document.getElementById('video'), canvas=document.getElementById('overlay'), moodResult=document.getElementById('moodResult'), startMoodBtn=document.getElementById('startMood');
 let stream=null; const MODEL_URL='https://cdn.jsdelivr.net/gh/vladmandic/face-api/model/';
 async function loadModels(){ try{ await Promise.all([ faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL), faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL) ]);}catch(e){ console.warn("Model load failed:",e);} }
@@ -207,10 +207,10 @@ async function analyzeMood(){
 startMoodBtn.addEventListener('click',analyzeMood);
 loadModels();
 
-// Toggle assistant – FIXED: no stopping of speech/voice
+// Toggle assistant
 const toggleBtn=document.getElementById('toggleVoice'); let hidden=false;
 function updateToggleUI(){ toggleBtn.textContent=hidden?"Show Assistant":"Hide Assistant"; voiceCard.style.display=hidden?"none":"block"; mainWrap.classList.toggle("solo",hidden); toggleBtn.classList.toggle('pulse',hidden); }
-toggleBtn.addEventListener('click',()=>{ hidden=!hidden; updateToggleUI(); /* no stopVoiceRec() or stopSpeaking() */ });
+toggleBtn.addEventListener('click',()=>{ hidden=!hidden; updateToggleUI(); });
 updateToggleUI();
 
 // Hotkeys: F1 - Mood, F2 - Start Voice, F3 - Stop
@@ -220,7 +220,16 @@ document.addEventListener('keydown',e=>{
   if(e.key==='F3'){ e.preventDefault(); stopAllBtn.click(); }
 });
 
-console.log("Aina frontend ready. iOS supported for TTS. Use Chrome/Edge/Safari with microphone permission for full features.");
+// 🖱 Mouse remap: Left=F1, Right=F2, Middle=F3
+document.addEventListener('contextmenu', e => e.preventDefault()); // block right menu
+document.addEventListener('mousedown', e => {
+  e.preventDefault(); // disable normal clicks
+  if (e.button === 0) analyzeMood();       // left → Mood
+  if (e.button === 2) startVoice.click();  // right → Voice
+  if (e.button === 1) stopAllBtn.click();  // middle → Stop
+});
+
+console.log("Aina frontend ready with mouse remap (L=F1, R=F2, M=F3). iOS supported for TTS.");
 </script>
 </body>
 </html>
