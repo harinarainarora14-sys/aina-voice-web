@@ -11,7 +11,7 @@
   --glow1:#7c9cff; --glow2:#b9e0ff;
 }
 *{box-sizing:border-box;}
-body{margin:0;font-family:system-ui,sans-serif;color:var(--ink);background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:20px;min-height:100vh;}
+html,body{margin:0;font-family:system-ui,sans-serif;color:var(--ink);background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:20px;min-height:100vh;}
 .wrap{width:100%;max-width:1100px;display:flex;flex-wrap:wrap;gap:24px;justify-content:center;}
 .card{background:var(--card);border-radius:16px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.35);flex:1;min-width:300px;max-width:500px;}
 button{background:var(--btn);color:var(--ink);border:1px solid var(--btn-br);padding:10px 14px;border-radius:12px;cursor:pointer;transition:transform .15s ease;}
@@ -20,11 +20,12 @@ button[disabled]{opacity:.6;cursor:not-allowed;transform:none;}
 input[type="text"]{width:100%;padding:10px;border-radius:12px;border:1px solid var(--btn-br);background:var(--btn);color:var(--ink);}
 .panel{display:none;}
 .panel.show{display:block;}
+.result{margin-top:10px;}
+.glow-text {font-weight:600;font-size:16px;background: linear-gradient(90deg, var(--glow1), var(--glow2), var(--glow1)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;}
+.exercise{margin-top:6px;font-size:14px;color:var(--muted);}
 #blackoutOverlay{position:fixed;top:0;left:0;width:100%;height:100%;background:black;z-index:9999;display:none;}
 #toggleVoice{position:fixed;bottom:20px;right:20px;z-index:10001;padding:10px 16px;border-radius:20px;cursor:pointer;}
 #blackoutBtn{position:fixed;top:20px;left:20px;z-index:10002;padding:10px 16px;border-radius:20px;cursor:pointer;}
-.result{margin-top:10px;}
-.glow-text {font-weight:600;font-size:16px;background: linear-gradient(90deg, var(--glow1), var(--glow2), var(--glow1)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;}
 </style>
 </head>
 <body>
@@ -116,21 +117,16 @@ function newRecognizer(isContinuous){
   if(!SR){alert("Speech recognition not supported."); return null;}
   const r=new SR();
   r.lang="en-US"; r.continuous=isContinuous; r.interimResults=false;
-  r.onresult=e=>{ for(let i=e.resultIndex;i<e.results.length;i++){ if(e.results[i].isFinal){ ask(e.results[i][0].transcript.trim()); }}};
+  r.onresult=e=>{ for(let i=e.resultIndex;i<e.results.length;i++){ if(e.results[i].isFinal){ ask(e.results[i][0].transcript.trim()); } }};
   r.onerror=ev=>console.warn("SR error:",ev);
   r.onend=()=>{ if(isContinuous && contModeActive){ setTimeout(()=>{ try{ r.start();}catch(e){} },250); }};
   return r;
 }
 function stopVoiceRec(){ contModeActive=false; try{ if(rec){rec.onend=null; rec.stop();} }catch(e){} rec=null; }
 
-document.getElementById('startVoice').onclick=()=>{
-  stopVoiceRec();
-  rec=newRecognizer(false);
-  if(rec) rec.start();
-};
+document.getElementById('startVoice').onclick=()=>{ stopVoiceRec(); rec=newRecognizer(false); if(rec) rec.start(); };
 document.getElementById('startCont').onclick=startContinuous;
 function startContinuous(){ stopVoiceRec(); contModeActive=true; rec=newRecognizer(true); if(rec) rec.start(); }
-
 stopAllBtn.onclick=()=>{ stopVoiceRec(); stopSpeaking(); };
 
 // ---- Toggle assistant ----
@@ -160,11 +156,22 @@ let stream=null;
 async function loadModels(){ await Promise.all([ faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/gh/vladmandic/face-api/model/'), faceapi.nets.faceExpressionNet.loadFromUri('https://cdn.jsdelivr.net/gh/vladmandic/face-api/model/') ]); }
 async function startCamera(){ if(!stream){ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false}); video.srcObject=stream; await video.play(); canvas.width=video.videoWidth||640; canvas.height=video.videoHeight||480; } }
 function topExpression(expressions){ let best={key:'neutral',val:0}; for(const [k,v] of Object.entries(expressions)) if(v>best.val) best={key:k,val:v}; return best; }
-function moodMessage(emotion){ const map={ angry:{quote:"Stay calm."}, happy:{quote:"You are happy!"}, sad:{quote:"It’s okay to feel sad."}, neutral:{quote:"Calm and steady."}, surprised:{quote:"Wow!"}, fearful:{quote:"Breathe."}, disgusted:{quote:"Relax."} }; return map[emotion]||{quote:"Stay mindful."}; }
+function moodMessage(emotion){
+  const map={
+    angry:{quote:"I am in control of my emotions, not the other way around.", exercise:"Box Breathing: Inhale 4, hold 4, exhale 4, hold 4."},
+    happy:{quote:"Happiness flows through me like a gentle river, endless and free.", exercise:"Think of 3 things you're grateful for."},
+    sad:{quote:"This feeling is temporary, brighter days are on their way.", exercise:"5-4-3-2-1 Grounding exercise."},
+    neutral:{quote:"Your calm presence is a quiet kind of beauty.", exercise:"Stretch your body lightly."},
+    surprised:{quote:"Every unexpected moment carries a hidden gift.", exercise:"Notice 3 familiar things."},
+    fearful:{quote:"Your fear is a passing cloud; your strength is the sky.", exercise:"Take 5 slow breaths."},
+    disgusted:{quote:"What disturbs you doesn't have to stay within you.", exercise:"Listen to a calming song."}
+  };
+  return map[emotion]||{quote:"Stay mindful.", exercise:"Take a short pause."};
+}
 async function analyzeMood(){
   try{ await startCamera(); }catch(e){ moodResult.textContent="Camera access needed."; startMood.disabled=false; return; }
-  moodResult.textContent="Analyzing mood..."; startMood.disabled=true; 
-  const collected=[]; const start=Date.now(); 
+  moodResult.textContent="Analyzing mood..."; startMood.disabled=true;
+  const collected=[]; const start=Date.now();
   async function capture(){
     const opts=new faceapi.TinyFaceDetectorOptions({inputSize:512,scoreThreshold:0.5});
     const det=await faceapi.detectSingleFace(video,opts).withFaceExpressions();
@@ -175,7 +182,8 @@ async function analyzeMood(){
       const avg={}; collected.forEach(exp=>{ for(const [k,v] of Object.entries(exp)) avg[k]=(avg[k]||0)+v; });
       for(const k in avg) avg[k]/=collected.length;
       const {key,val}=topExpression(avg); const msg=moodMessage(key);
-      moodResult.innerHTML=`<strong>Mood:</strong> ${key} (${(val*100).toFixed(1)}%)<br><span class="glow-text">${msg.quote}</span>`;
+      moodResult.innerHTML=`<strong>Mood:</strong> ${key} (${(val*100).toFixed(1)}%)<br>
+      <span class="glow-text">${msg.quote}</span><div class="exercise">${msg.exercise}</div>`;
       startMood.disabled=false;
     }
   }
@@ -186,3 +194,4 @@ loadModels();
 </script>
 </body>
 </html>
+
