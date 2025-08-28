@@ -136,7 +136,7 @@ async function ask(question){
     const txt=(data&&data.answer)?data.answer:"No answer received.";
     answerEl.innerHTML=`<span class="glow-text">${txt}</span>`;
     speak(txt);
-  }catch(e){ console.error("API error:",e); answerEl.textContent="Error connecting to API (check console)."; }
+  }catch(e){ console.error("API error:",e); answerEl.textContent="Error connecting to API."; }
 }
 function sendText(){ const q=textIn.value.trim(); if(!q)return; ask(q); textIn.value=""; }
 textIn.addEventListener('keydown', ev=>{ if(ev.key==='Enter'){ ev.preventDefault(); sendText(); } });
@@ -165,7 +165,7 @@ startVoice.onclick=()=>{ stopVoiceRec(); rec=newRecognizer(false); if(rec) try{ 
 const startCont=document.getElementById('startCont');
 function startContinuous(){ stopVoiceRec(); contModeActive=true; rec=newRecognizer(true); if(rec) try{ rec.start(); } catch(e) console.warn(e);}
 startCont.onclick=()=>startContinuous();
-function stopVoiceRec(){ contModeActive=false; try{ if(rec) rec.onend=null; }catch(e){} try{ if(rec) rec.stop(); }catch(e){} rec=null; }
+function stopVoiceRec(){ contModeActive=false; try { if(rec) rec.onend=null; } catch(e){} try { if(rec) rec.stop(); } catch(e){} rec=null; }
 stopAllBtn.onclick=()=>{ stopVoiceRec(); stopSpeaking(); };
 
 // Mood Detector
@@ -174,7 +174,7 @@ let stream=null; const MODEL_URL='https://cdn.jsdelivr.net/gh/vladmandic/face-ap
 async function loadModels(){ try{ await Promise.all([ faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL), faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL) ]);}catch(e){ console.warn("Model load failed:",e);} }
 async function startCamera(){ if(!stream){ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false}); video.srcObject=stream; await video.play(); } canvas.width=video.videoWidth||640; canvas.height=video.videoHeight||480; }
 function topExpression(expressions){ let best={key:'neutral',val:0}; for(const [k,v] of Object.entries(expressions)) if(v>best.val) best={key:k,val:v}; return best; }
-function moodMessage(emotion){ const map={ angry:{quote:"I am in control of my emotions, not the other way around.",exercise:"Box Breathing: Inhale 4, hold 4, exhale 4, hold 4."}, happy:{quote:"Happiness flows through me like a gentle river, endless and free.",exercise:"Think 3 things you're grateful for."}, sad:{quote:"This feeling is temporary, brighter days are on their way.",exercise:"5-4-3-2-1 Grounding."}, neutral:{quote:"Your calm presence is a quiet kind of beauty.",exercise:"Stretch your body lightly."}, surprised:{quote:"Every unexpected moment carries a hidden gift.",exercise:"Notice 3 familiar things."}, fearful:{quote:"Your fear is a passing cloud; your strength is the sky.",exercise:"Take 5 slow breaths."}, disgusted:{quote:"What disturbs you doesn't have to stay within you.",exercise:"Listen to a calming song."}}; return map[emotion]||{quote:"Stay mindful.",exercise:"Take a short pause."}; }
+function moodMessage(emotion){ const map={ angry:{quote:"I am in control of my emotions.",exercise:"Box Breathing: Inhale 4, hold 4, exhale 4, hold 4."}, happy:{quote:"Happiness flows through me.",exercise:"Think 3 things you're grateful for."}, sad:{quote:"This feeling is temporary.",exercise:"5-4-3-2-1 Grounding."}, neutral:{quote:"Your calm presence is beautiful.",exercise:"Stretch your body lightly."}, surprised:{quote:"Every unexpected moment carries a gift.",exercise:"Notice 3 familiar things."}, fearful:{quote:"Your fear is passing; your strength is the sky.",exercise:"Take 5 slow breaths."}, disgusted:{quote:"What disturbs you doesn't stay within you.",exercise:"Listen to a calming song."}}; return map[emotion]||{quote:"Stay mindful.",exercise:"Take a short pause."}; }
 async function analyzeMood(){
   try{ await startCamera(); } catch(e){ moodResult.textContent="Camera access needed."; startMoodBtn.disabled=false; return; }
   moodResult.textContent="Analyzing for 4 seconds…"; startMoodBtn.disabled=true; 
@@ -211,25 +211,14 @@ document.addEventListener('keydown',e=>{
   if(e.key==='F3'){ e.preventDefault(); stopAllBtn.click(); }
 });
 
-// 🖱 Mouse remap: Right = Mood, Left single = Voice, Left double = Stop
-document.addEventListener('contextmenu', e => e.preventDefault()); // disable context menu
-document.addEventListener('mousedown', e => {
-  if (e.button === 0) { // left click
-    // single vs double handled separately
-  }
-  if (e.button === 2) { // right click
-    e.preventDefault();
-    analyzeMood();
-  }
-});
-document.addEventListener('click', e => {
-  if (e.button === 0) startVoice.click(); // left single → Voice
-});
-document.addEventListener('dblclick', e => {
-  if (e.button === 0) stopAllBtn.click(); // left double → Stop
-});
+// Mouse remap
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('mousedown', e => { if(e.button===2){ e.preventDefault(); analyzeMood(); } });
+document.addEventListener('click', e => { if(e.button===0) startVoice.click(); });
+document.addEventListener('dblclick', e => { if(e.button===0) stopAllBtn.click(); });
 
-console.log("Aina frontend ready with mouse remap (Right=Mood, Left=Voice, DoubleLeft=Stop). iOS supported for TTS.");
+console.log("Aina frontend ready. Hotkeys F4=Mood, F2=Voice, F3=Stop. Mouse: Right=Mood, Left=Voice, DoubleLeft=Stop.");
 </script>
 </body>
 </html>
+
