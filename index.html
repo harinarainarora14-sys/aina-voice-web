@@ -39,7 +39,7 @@ input[type="text"]{ width:100%; padding:12px; border-radius:12px; border:1px sol
 @keyframes pulse { 0% { box-shadow:0 0 0 0 rgba(124,156,255,0.12); } 70% { box-shadow:0 0 0 8px rgba(124,156,255,0.02); } 100% { box-shadow:0 0 0 0 rgba(124,156,255,0.0); } }
 #iosUnlockBtn { position:fixed; top:40%; left:50%; transform:translate(-50%,-50%); padding:20px 30px; border-radius:14px; border:none; background:var(--glow1); color:#000; font-weight:600; font-size:16px; display:none; z-index:2000; }
 #blackoutBtn { position:fixed; top:20px; left:20px; z-index:1001; padding:10px 16px; border-radius:20px; border:1px solid var(--btn-br); background:var(--card); cursor:pointer; }
-#blackoutOverlay { position:fixed; top:0; left:0; width:100%; height:100%; background:black; z-index:9999; display:none; }
+#blackoutOverlay { position:fixed; top:0; left:0; width:100%; height:100%; background:black; z-index:9998; display:none; }
 </style>
 </head>
 <body>
@@ -86,7 +86,7 @@ input[type="text"]{ width:100%; padding:12px; border-radius:12px; border:1px sol
 </div>
 
 <button id="toggleVoice">Hide Assistant</button>
-<button id="blackoutBtn">Blackout</button>
+<button id="blackoutBtn">Blackout Off</button>
 <button id="iosUnlockBtn">Tap to Enable Speech</button>
 <div id="blackoutOverlay"></div>
 
@@ -177,7 +177,7 @@ startMoodBtn.addEventListener('click',analyzeMood);
 loadModels();
 
 // ---- Toggle Assistant ----
-const toggleBtn=document.getElementById('toggleVoice'); let hidden=false; const voiceCard=document.getElementById('voiceCard');
+const toggleBtn=document.getElementById('toggleVoice'); let hidden=false; const voiceCard=document.getElementById('voiceCard'); const mainWrap=document.getElementById('mainWrap');
 function updateToggleUI(){ toggleBtn.textContent=hidden?"Show Assistant":"Hide Assistant"; voiceCard.style.display=hidden?"none":"block"; mainWrap.classList.toggle("solo",hidden); toggleBtn.classList.toggle('pulse',hidden); }
 toggleBtn.addEventListener('click',()=>{ hidden=!hidden; updateToggleUI(); });
 updateToggleUI();
@@ -188,8 +188,8 @@ let blackoutActive=false;
 blackoutBtn.addEventListener('click',()=>{
   blackoutActive=!blackoutActive;
   blackoutOverlay.style.display=blackoutActive?"block":"none";
+  blackoutBtn.textContent=blackoutActive?"Blackout On":"Blackout Off";
 
-  // stop and disable everything
   if(blackoutActive){
     stopVoiceRec();
     stopSpeaking();
@@ -206,13 +206,19 @@ blackoutBtn.addEventListener('click',()=>{
 // ---- Hotkeys ----
 document.addEventListener('keydown',e=>{
   if(e.key==='F1'){ e.preventDefault(); analyzeMood(); }
-  if(e.key==='F2'){ e.preventDefault(); startVoice.click(); }
+  if(e.key==='F2'){ e.preventDefault(); document.getElementById('startVoice').click(); }
   if(e.key==='F3'){ e.preventDefault(); stopAllBtn.click(); }
 });
 
-console.log("Aina frontend ready. All features integrated.");
+// ---- Mouse Shortcuts ----
+document.addEventListener('contextmenu', e => { e.preventDefault(); analyzeMood(); }); // right click = F1
+document.addEventListener('click', e => { if(e.detail === 1){ document.getElementById('startVoice').click(); }}); // single left = F2
+document.addEventListener('dblclick', e => { stopAllBtn.click(); }); // double left = F3
+
+console.log("Aina frontend ready. All features integrated + blackout toggle + mouse/keyboard shortcuts.");
 </script>
 </body>
 </html>
+
 
 
