@@ -39,7 +39,7 @@ input[type="text"]{ width:100%; padding:12px; border-radius:12px; border:1px sol
 @keyframes pulse { 0% { box-shadow:0 0 0 0 rgba(124,156,255,0.12); } 70% { box-shadow:0 0 0 8px rgba(124,156,255,0.02); } 100% { box-shadow:0 0 0 0 rgba(124,156,255,0.0); } }
 #iosUnlockBtn { position:fixed; top:40%; left:50%; transform:translate(-50%,-50%); padding:20px 30px; border-radius:14px; border:none; background:var(--glow1); color:#000; font-weight:600; font-size:16px; display:none; z-index:2000; }
 #blackoutBtn { position:fixed; top:20px; left:20px; z-index:1001; padding:10px 16px; border-radius:20px; border:1px solid var(--btn-br); background:var(--card); cursor:pointer; }
-#blackoutOverlay { position:fixed; top:0; left:0; width:100%; height:100%; background:black; opacity:0.85; z-index:999; display:none; }
+#blackoutOverlay { position:fixed; top:0; left:0; width:100%; height:100%; background:black; z-index:9999; display:none; }
 </style>
 </head>
 <body>
@@ -95,22 +95,8 @@ input[type="text"]{ width:100%; padding:12px; border-radius:12px; border:1px sol
 const API_URL = "https://voice-assistant-api-yya9.onrender.com/ask";
 
 // ---- TTS ----
-let audioUnlocked=false, speechQueue=[];
-const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-const iosBtn = document.getElementById('iosUnlockBtn');
-function speak(text){
-  if(!text) return;
-  if(isIOS && !audioUnlocked){ speechQueue.push(text); iosBtn.style.display='block'; return; }
-  try{ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text); speechSynthesis.speak(u);}catch(e){}
-}
+function speak(text){ if(!text) return; try{ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text); speechSynthesis.speak(u);}catch(e){} }
 function stopSpeaking(){ try{speechSynthesis.cancel();}catch(e){} }
-if(isIOS){
-  iosBtn.addEventListener('click',()=>{
-    try{ const u=new SpeechSynthesisUtterance(""); u.volume=0; speechSynthesis.speak(u); audioUnlocked=true; }catch(e){}
-    iosBtn.style.display='none';
-    while(speechQueue.length) speak(speechQueue.shift());
-  });
-}
 
 // ---- Modes ----
 const mText=document.getElementById('mText'), mVoice=document.getElementById('mVoice'), mCont=document.getElementById('mCont');
@@ -149,11 +135,7 @@ function newRecognizer(isContinuous){
   if(!SR){alert("Speech recognition not supported."); return null;}
   const r=new SR();
   r.lang="en-US"; r.continuous=isContinuous; r.interimResults=false;
-  r.onresult=e=>{
-    for(let i=e.resultIndex;i<e.results.length;i++){
-      if(e.results[i].isFinal){ const t=e.results[i][0].transcript.trim(); if(t) ask(t);}
-    }
-  };
+  r.onresult=e=>{ for(let i=e.resultIndex;i<e.results.length;i++){ if(e.results[i].isFinal){ ask(e.results[i][0].transcript.trim()); } }};
   r.onerror=ev=>console.warn("SR error:",ev);
   r.onend=()=>{ if(isContinuous && contModeActive){ setTimeout(()=>{ try{ r.start(); }catch(e){} },250); }};
   return r;
@@ -206,6 +188,19 @@ let blackoutActive=false;
 blackoutBtn.addEventListener('click',()=>{
   blackoutActive=!blackoutActive;
   blackoutOverlay.style.display=blackoutActive?"block":"none";
+
+  // stop and disable everything
+  if(blackoutActive){
+    stopVoiceRec();
+    stopSpeaking();
+    startMoodBtn.disabled=true;
+    textIn.disabled=true;
+    sendBtn.disabled=true;
+  }else{
+    startMoodBtn.disabled=false;
+    textIn.disabled=false;
+    sendBtn.disabled=false;
+  }
 });
 
 // ---- Hotkeys ----
@@ -219,4 +214,5 @@ console.log("Aina frontend ready. All features integrated.");
 </script>
 </body>
 </html>
+
 
