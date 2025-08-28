@@ -163,7 +163,7 @@ function newRecognizer(isContinuous){
 const startVoice=document.getElementById('startVoice');
 startVoice.onclick=()=>{ stopVoiceRec(); rec=newRecognizer(false); if(rec) try{ rec.start(); } catch(e){ console.warn(e); } };
 const startCont=document.getElementById('startCont');
-function startContinuous(){ stopVoiceRec(); contModeActive=true; rec=newRecognizer(true); if(rec) try{ rec.start(); } catch(e){ console.warn(e);} }
+function startContinuous(){ stopVoiceRec(); contModeActive=true; rec=newRecognizer(true); if(rec) try{ rec.start(); } catch(e) console.warn(e);}
 startCont.onclick=()=>startContinuous();
 function stopVoiceRec(){ contModeActive=false; try{ if(rec) rec.onend=null; }catch(e){} try{ if(rec) rec.stop(); }catch(e){} rec=null; }
 stopAllBtn.onclick=()=>{ stopVoiceRec(); stopSpeaking(); };
@@ -204,9 +204,9 @@ function updateToggleUI(){ toggleBtn.textContent=hidden?"Show Assistant":"Hide A
 toggleBtn.addEventListener('click',()=>{ hidden=!hidden; updateToggleUI(); });
 updateToggleUI();
 
-// Hotkeys: F1 - Mood, F2 - Start Voice, F3 - Stop
+// Hotkeys: F4 - Mood, F2 - Start Voice, F3 - Stop
 document.addEventListener('keydown',e=>{
-  if(e.key==='F1'){ e.preventDefault(); analyzeMood(); }
+  if(e.key==='F4'){ e.preventDefault(); analyzeMood(); }
   if(e.key==='F2'){ e.preventDefault(); startVoice.click(); }
   if(e.key==='F3'){ e.preventDefault(); stopAllBtn.click(); }
 });
@@ -233,4 +233,3 @@ console.log("Aina frontend ready with mouse remap (Right=Mood, Left=Voice, Doubl
 </script>
 </body>
 </html>
-
