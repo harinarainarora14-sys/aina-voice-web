@@ -37,15 +37,14 @@
     #toggleVoice { position:fixed; bottom:20px; right:20px; z-index:1000; background:var(--card); border:1px solid var(--btn-br); border-radius:20px; padding:10px 16px; box-shadow:0 4px 12px rgba(0,0,0,.4); }
     #toggleVoice.pulse { animation: pulse 1.6s infinite; border-color:var(--glow1); }
     @keyframes pulse { 0% { box-shadow:0 0 0 0 rgba(124,156,255,0.12); } 70% { box-shadow:0 0 0 8px rgba(124,156,255,0.02); } 100% { box-shadow:0 0 0 0 rgba(124,156,255,0.0); } }
-    #iosUnlockBtn { position:fixed; top:40%; left:50%; transform:translate(-50%,-50%); padding:20px 30px; border-radius:14px; border:none; background:var(--glow1); color:#000; font-weight:600; font-size:16px; display:none; z-index:2000; }
+    #blackoutBtn { position:fixed; bottom:70px; right:20px; z-index:5001; }
     #blackoutOverlay {
       position:fixed; top:0; left:0; width:100%; height:100%;
       background:black; z-index:5000; display:none; align-items:center; justify-content:center;
     }
-    #blackoutOverlay button {
-      background:white; color:black; font-weight:bold; font-size:16px; padding:14px 20px; border-radius:10px;
+    #blackoutOverlay p {
+      color:white; font-size:18px; font-weight:bold;
     }
-    #blackoutToggle { position:fixed; bottom:70px; right:20px; z-index:1200; }
   </style>
 </head>
 <body>
@@ -91,180 +90,28 @@
 </div>
 
 <button id="toggleVoice">Hide Assistant</button>
-<button id="iosUnlockBtn">Tap to Enable Speech</button>
-<button id="blackoutToggle">Toggle Blackout</button>
-<div id="blackoutOverlay"><button id="exitBlackout">Exit Blackout</button></div>
+<button id="blackoutBtn">Enter Blackout</button>
+<div id="blackoutOverlay"><p>Blackout Mode Active</p></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
 <script>
-const API_URL = "https://voice-assistant-api-yya9.onrender.com/ask";
+// --- keep all your existing JS above here ---
 
-let audioUnlocked = false;
-let speechQueue = [];
-let blackoutActive = false;
-const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-const iosBtn = document.getElementById('iosUnlockBtn');
-
-function speak(text) {
-  if (!text) return;
-  if (blackoutActive) return; // disable speech in blackout
-  if (isIOS && !audioUnlocked) { speechQueue.push(text); iosBtn.style.display = 'block'; return; }
-  try { speechSynthesis.cancel(); const utter = new SpeechSynthesisUtterance(text); speechSynthesis.speak(utter); }
-  catch(e){ console.warn("TTS error:", e);}
-}
-
-function stopSpeaking(){ try { speechSynthesis.cancel(); } catch(e){} }
-
-if(isIOS){
-  iosBtn.addEventListener('click',()=>{
-    try { const u = new SpeechSynthesisUtterance(""); u.volume=0; speechSynthesis.speak(u); audioUnlocked=true; } catch(e){}
-    iosBtn.style.display='none';
-    while(speechQueue.length) speak(speechQueue.shift());
-  });
-}
-
-// Mode toggles
-const mText=document.getElementById('mText'), mVoice=document.getElementById('mVoice'), mCont=document.getElementById('mCont');
-const panelText=document.getElementById('panelText'), panelVoice=document.getElementById('panelVoice'), panelCont=document.getElementById('panelCont');
-const stopAllBtn=document.getElementById('stopAll'), answerEl=document.getElementById('answer');
-const textIn=document.getElementById('textIn'), sendBtn=document.getElementById('sendBtn');
-let rec=null, contModeActive=false;
-
-function setMode(which){
-  [mText,mVoice,mCont].forEach(b=>b.classList.remove('active'));
-  [panelText,panelVoice,panelCont].forEach(p=>p.classList.remove('show'));
-  if(which==='text'){ mText.classList.add('active'); panelText.classList.add('show'); stopVoiceRec(); }
-  if(which==='voice'){ mVoice.classList.add('active'); panelVoice.classList.add('show'); stopVoiceRec(); }
-  if(which==='cont'){ mCont.classList.add('active'); panelCont.classList.add('show'); startContinuous(); }
-}
-mText.onclick=()=>setMode('text'); mVoice.onclick=()=>setMode('voice'); mCont.onclick=()=>setMode('cont');
-
-async function ask(question){
-  if(!question||!question.trim()||blackoutActive)return;
-  stopSpeaking();
-  answerEl.textContent="Thinking…";
-  try{
-    const res=await fetch(`${API_URL}?question=${encodeURIComponent(question)}`);
-    const data=await res.json();
-    const txt=(data&&data.answer)?data.answer:"No answer received.";
-    answerEl.innerHTML=`<span class="glow-text">${txt}</span>`;
-    speak(txt);
-  }catch(e){ console.error("API error:",e); answerEl.textContent="Error connecting to API (check console)."; }
-}
-
-function sendText(){ const q=textIn.value.trim(); if(!q)return; ask(q); textIn.value=""; }
-textIn.addEventListener('keydown', ev=>{ if(ev.key==='Enter'){ ev.preventDefault(); sendText(); } });
-sendBtn.addEventListener('click', sendText);
-
-// Speech Recognition
-function newRecognizer(isContinuous){
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){alert("Speech recognition not supported."); return null;}
-  const r=new SR();
-  r.lang="en-US"; r.continuous=isContinuous; r.interimResults=false;
-  r.onresult=e=>{
-    if(blackoutActive) return;
-    for(let i=e.resultIndex;i<e.results.length;i++){
-      if(e.results[i].isFinal){
-        const transcript=e.results[i][0].transcript.trim();
-        if(transcript) ask(transcript);
-      }
-    }
-  };
-  r.onerror=ev=>console.warn("SR error:",ev);
-  r.onend=()=>{ 
-    if(isContinuous && contModeActive && !blackoutActive){
-      setTimeout(()=>{ try{ r.start(); }catch(e){ console.warn("Restart fail:",e);} },250);
-    }
-  };
-  return r;
-}
-
-const startVoice=document.getElementById('startVoice');
-startVoice.onclick=()=>{ stopVoiceRec(); if(blackoutActive)return; rec=newRecognizer(false); if(rec) try{ rec.start(); } catch(e){ console.warn(e); } };
-
-const startCont=document.getElementById('startCont');
-function startContinuous(){ stopVoiceRec(); if(blackoutActive)return; contModeActive=true; rec=newRecognizer(true); if(rec) try{ rec.start(); } catch(e){ console.warn(e);} }
-startCont.onclick=()=>startContinuous();
-
-function stopVoiceRec(){ contModeActive=false; try{ if(rec) rec.onend=null; }catch(e){} try{ if(rec) rec.stop(); }catch(e){} rec=null; }
-stopAllBtn.onclick=()=>{ stopVoiceRec(); stopSpeaking(); };
-
-// Mood Detector
-const video=document.getElementById('video'), canvas=document.getElementById('overlay'), moodResult=document.getElementById('moodResult'), startMoodBtn=document.getElementById('startMood');
-let stream=null; const MODEL_URL='https://cdn.jsdelivr.net/gh/vladmandic/face-api/model/';
-async function loadModels(){ try{ await Promise.all([ faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL), faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL) ]);}catch(e){ console.warn("Model load failed:",e);} }
-async function startCamera(){ if(!stream){ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false}); video.srcObject=stream; await video.play(); } canvas.width=video.videoWidth||640; canvas.height=video.videoHeight||480; }
-function topExpression(expressions){ let best={key:'neutral',val:0}; for(const [k,v] of Object.entries(expressions)) if(v>best.val) best={key:k,val:v}; return best; }
-function moodMessage(emotion){ const map={ angry:{quote:"I am in control of my emotions, not the other way around.",exercise:"Box Breathing"}, happy:{quote:"Happiness flows through me.",exercise:"Gratitude: think of 3 things."}, sad:{quote:"This feeling is temporary.",exercise:"5-4-3-2-1 Grounding."}, neutral:{quote:"Your calm presence is beauty.",exercise:"Stretch lightly."}, surprised:{quote:"Every unexpected moment carries a gift.",exercise:"Notice 3 familiar things."}, fearful:{quote:"Fear is a passing cloud.",exercise:"Take 5 slow breaths."}, disgusted:{quote:"What disturbs you doesn’t stay within.",exercise:"Listen to calming music."}}; return map[emotion]||{quote:"Stay mindful.",exercise:"Take a pause."}; }
-async function analyzeMood(){
-  if(blackoutActive)return;
-  try{ await startCamera(); } catch(e){ moodResult.textContent="Camera access needed."; startMoodBtn.disabled=false; return; }
-  moodResult.textContent="Analyzing for 4 seconds…"; startMoodBtn.disabled=true; 
-  const collected=[]; const start=Date.now(); 
-  async function capture(){
-    const opts=new faceapi.TinyFaceDetectorOptions({inputSize:512,scoreThreshold:0.5});
-    const det=await faceapi.detectSingleFace(video,opts).withFaceExpressions();
-    if(det) collected.push(det.expressions);
-    if(Date.now()-start<4000) requestAnimationFrame(capture);
-    else{
-      if(!collected.length){ moodResult.textContent="No face detected."; startMoodBtn.disabled=false; return; }
-      const avg={}; collected.forEach(exp=>{ for(const [k,v] of Object.entries(exp)) avg[k]=(avg[k]||0)+v; });
-      for(const k in avg) avg[k]/=collected.length;
-      const {key,val}=topExpression(avg); const msg=moodMessage(key);
-      moodResult.innerHTML=`<strong>Mood:</strong> ${key} (${(val*100).toFixed(1)}%)<br><span class="glow-text">${msg.quote}</span><div class="exercise">${msg.exercise}</div>`;
-      startMoodBtn.disabled=false;
-    }
-  }
-  capture();
-}
-startMoodBtn.addEventListener('click',analyzeMood);
-loadModels();
-
-// Toggle assistant
-const toggleBtn=document.getElementById('toggleVoice'); let hidden=false;
-function updateToggleUI(){ toggleBtn.textContent=hidden?"Show Assistant":"Hide Assistant"; voiceCard.style.display=hidden?"none":"block"; mainWrap.classList.toggle("solo",hidden); toggleBtn.classList.toggle('pulse',hidden); }
-toggleBtn.addEventListener('click',()=>{ hidden=!hidden; updateToggleUI(); });
-updateToggleUI();
-
-// Hotkeys: F1 - Mood, F2 - Start Voice, F3 - Stop
-document.addEventListener('keydown',e=>{
-  if(blackoutActive)return;
-  if(e.key==='F1'){ e.preventDefault(); analyzeMood(); }
-  if(e.key==='F2'){ e.preventDefault(); startVoice.click(); }
-  if(e.key==='F3'){ e.preventDefault(); stopAllBtn.click(); }
-});
-
-// 🖱 Mouse remap: Right=F1 (Mood), Left single=F2 (Voice), Left double=F3 (Stop)
-document.addEventListener('contextmenu', e => e.preventDefault());
-document.addEventListener('mousedown', e => {
-  if(blackoutActive)return;
-  if (e.button === 2) analyzeMood();
-  if (e.button === 0) startVoice.click();
-});
-document.addEventListener('dblclick', e => {
-  if(blackoutActive)return;
-  if (e.button === 0) stopAllBtn.click();
-});
-
-// Blackout toggle
+let blackoutActive=false;
+const blackoutBtn=document.getElementById('blackoutBtn');
 const blackoutOverlay=document.getElementById('blackoutOverlay');
-const blackoutToggle=document.getElementById('blackoutToggle');
-const exitBlackout=document.getElementById('exitBlackout');
 
-function enterBlackout(){
-  blackoutActive=true;
-  stopVoiceRec(); stopSpeaking();
-  blackoutOverlay.style.display="flex";
+function toggleBlackout(){
+  blackoutActive=!blackoutActive;
+  if(blackoutActive){
+    stopVoiceRec(); stopSpeaking();
+    blackoutOverlay.style.display="flex";
+    blackoutBtn.textContent="Exit Blackout";
+  } else {
+    blackoutOverlay.style.display="none";
+    blackoutBtn.textContent="Enter Blackout";
+  }
 }
-function exitBlackoutFn(){
-  blackoutActive=false;
-  blackoutOverlay.style.display="none";
-}
-blackoutToggle.onclick=()=>{ if(blackoutActive) exitBlackoutFn(); else enterBlackout(); };
-exitBlackout.onclick=()=>exitBlackoutFn();
+blackoutBtn.onclick=toggleBlackout;
 </script>
 </body>
 </html>
-
-
