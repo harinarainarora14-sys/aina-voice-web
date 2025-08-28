@@ -16,6 +16,7 @@ body{margin:0;font-family:system-ui,sans-serif;color:var(--ink);background:var(-
 .card{background:var(--card);border-radius:16px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.35);flex:1;min-width:300px;max-width:500px;}
 button{background:var(--btn);color:var(--ink);border:1px solid var(--btn-br);padding:10px 14px;border-radius:12px;cursor:pointer;transition:transform .15s ease;}
 button:hover{transform:scale(1.05);}
+button[disabled]{opacity:.6;cursor:not-allowed;transform:none;}
 input[type="text"]{width:100%;padding:10px;border-radius:12px;border:1px solid var(--btn-br);background:var(--btn);color:var(--ink);}
 .panel{display:none;}
 .panel.show{display:block;}
@@ -23,9 +24,11 @@ input[type="text"]{width:100%;padding:10px;border-radius:12px;border:1px solid v
 #toggleVoice{position:fixed;bottom:20px;right:20px;z-index:10001;padding:10px 16px;border-radius:20px;cursor:pointer;}
 #blackoutBtn{position:fixed;top:20px;left:20px;z-index:10002;padding:10px 16px;border-radius:20px;cursor:pointer;}
 .result{margin-top:10px;}
+.glow-text {font-weight:600;font-size:16px;background: linear-gradient(90deg, var(--glow1), var(--glow2), var(--glow1)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;}
 </style>
 </head>
 <body>
+
 <div class="wrap" id="mainWrap">
   <!-- Mood Detector -->
   <div class="card" id="moodCard">
@@ -33,6 +36,7 @@ input[type="text"]{width:100%;padding:10px;border-radius:12px;border:1px solid v
     <button id="startMood">Start</button>
     <div id="moodResult" class="result">Press Start to analyze mood.</div>
     <video id="video" autoplay muted playsinline style="display:none"></video>
+    <canvas id="overlay" style="display:none"></canvas>
   </div>
 
   <!-- Voice Assistant -->
@@ -63,14 +67,15 @@ input[type="text"]{width:100%;padding:10px;border-radius:12px;border:1px solid v
 <button id="blackoutBtn">Blackout</button>
 <div id="blackoutOverlay"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
 <script>
 const API_URL = "https://voice-assistant-api-yya9.onrender.com/ask";
 
-// Text-to-Speech
+// ---- TTS ----
 function speak(text){ if(!text) return; try{ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text); speechSynthesis.speak(u);}catch(e){} }
 function stopSpeaking(){ try{speechSynthesis.cancel();}catch(e){} }
 
-// Modes
+// ---- Modes ----
 const mText=document.getElementById('mText'), mVoice=document.getElementById('mVoice'), mCont=document.getElementById('mCont');
 const panelText=document.getElementById('panelText'), panelVoice=document.getElementById('panelVoice'), panelCont=document.getElementById('panelCont');
 const stopAllBtn=document.getElementById('stopAll'), answerEl=document.getElementById('answer');
@@ -86,7 +91,7 @@ function setMode(which){
 }
 mText.onclick=()=>setMode('text'); mVoice.onclick=()=>setMode('voice'); mCont.onclick=()=>setMode('cont');
 
-// Ask API
+// ---- Ask API ----
 async function ask(question){
   if(!question||!question.trim())return;
   stopSpeaking();
@@ -95,17 +100,17 @@ async function ask(question){
     const res=await fetch(`${API_URL}?question=${encodeURIComponent(question)}`);
     const data=await res.json();
     const txt=(data&&data.answer)?data.answer:"No answer received.";
-    answerEl.textContent=txt;
+    answerEl.innerHTML=`<span class="glow-text">${txt}</span>`;
     speak(txt);
   }catch(e){ console.error(e); answerEl.textContent="API Error"; }
 }
 
-// Text mode
+// ---- Text mode ----
 function sendText(){ const q=textIn.value.trim(); if(!q)return; ask(q); textIn.value=""; }
 sendBtn.addEventListener('click', sendText);
 textIn.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); sendText(); } });
 
-// Voice Recognition
+// ---- Voice Recognition ----
 function newRecognizer(isContinuous){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR){alert("Speech recognition not supported."); return null;}
@@ -128,13 +133,13 @@ function startContinuous(){ stopVoiceRec(); contModeActive=true; rec=newRecogniz
 
 stopAllBtn.onclick=()=>{ stopVoiceRec(); stopSpeaking(); };
 
-// Toggle assistant
+// ---- Toggle assistant ----
 const toggleBtn=document.getElementById('toggleVoice');
 const voiceCard=document.getElementById('voiceCard');
 let hidden=false;
 toggleBtn.onclick=()=>{ hidden=!hidden; voiceCard.style.display=hidden?"none":"block"; toggleBtn.textContent=hidden?"Show Assistant":"Hide Assistant"; };
 
-// Blackout
+// ---- Blackout ----
 const blackoutBtn=document.getElementById('blackoutBtn');
 const blackoutOverlay=document.getElementById('blackoutOverlay');
 let blackout=false;
@@ -149,12 +154,35 @@ blackoutBtn.onclick=()=>{
   sendBtn.disabled=blackout;
 };
 
-// Mood detector placeholder
-const moodResult=document.getElementById('moodResult');
-startMood.onclick=()=>{ 
-  moodResult.textContent="Analyzing mood..."; 
-  setTimeout(()=>{ moodResult.textContent="Mood: Neutral 😊"; },2000); 
-};
+// ---- Mood Detection ----
+const video=document.getElementById('video'), canvas=document.getElementById('overlay'), moodResult=document.getElementById('moodResult');
+let stream=null;
+async function loadModels(){ await Promise.all([ faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/gh/vladmandic/face-api/model/'), faceapi.nets.faceExpressionNet.loadFromUri('https://cdn.jsdelivr.net/gh/vladmandic/face-api/model/') ]); }
+async function startCamera(){ if(!stream){ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false}); video.srcObject=stream; await video.play(); canvas.width=video.videoWidth||640; canvas.height=video.videoHeight||480; } }
+function topExpression(expressions){ let best={key:'neutral',val:0}; for(const [k,v] of Object.entries(expressions)) if(v>best.val) best={key:k,val:v}; return best; }
+function moodMessage(emotion){ const map={ angry:{quote:"Stay calm."}, happy:{quote:"You are happy!"}, sad:{quote:"It’s okay to feel sad."}, neutral:{quote:"Calm and steady."}, surprised:{quote:"Wow!"}, fearful:{quote:"Breathe."}, disgusted:{quote:"Relax."} }; return map[emotion]||{quote:"Stay mindful."}; }
+async function analyzeMood(){
+  try{ await startCamera(); }catch(e){ moodResult.textContent="Camera access needed."; startMood.disabled=false; return; }
+  moodResult.textContent="Analyzing mood..."; startMood.disabled=true; 
+  const collected=[]; const start=Date.now(); 
+  async function capture(){
+    const opts=new faceapi.TinyFaceDetectorOptions({inputSize:512,scoreThreshold:0.5});
+    const det=await faceapi.detectSingleFace(video,opts).withFaceExpressions();
+    if(det) collected.push(det.expressions);
+    if(Date.now()-start<4000) requestAnimationFrame(capture);
+    else{
+      if(!collected.length){ moodResult.textContent="No face detected."; startMood.disabled=false; return; }
+      const avg={}; collected.forEach(exp=>{ for(const [k,v] of Object.entries(exp)) avg[k]=(avg[k]||0)+v; });
+      for(const k in avg) avg[k]/=collected.length;
+      const {key,val}=topExpression(avg); const msg=moodMessage(key);
+      moodResult.innerHTML=`<strong>Mood:</strong> ${key} (${(val*100).toFixed(1)}%)<br><span class="glow-text">${msg.quote}</span>`;
+      startMood.disabled=false;
+    }
+  }
+  capture();
+}
+startMood.addEventListener('click',analyzeMood);
+loadModels();
 </script>
 </body>
 </html>
