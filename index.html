@@ -10,36 +10,21 @@
   --btn:#0c1329; --btn-br:rgba(255,255,255,.12);
   --glow1:#7c9cff; --glow2:#b9e0ff;
 }
-* { box-sizing:border-box; }
-html,body { height:100%; margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color:var(--ink); }
-body { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; gap:24px; background:var(--bg); min-height:100vh; }
-.wrap { width:100%; max-width:1100px; display:flex; gap:24px; flex-wrap:wrap; justify-content:center; align-items:flex-start; }
-.wrap.solo { justify-content:center; }
-.wrap.solo .card#moodCard { max-width:640px; width:100%; }
-.card { background:var(--card); border-radius:16px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,.35); flex:1; min-width:300px; max-width:500px; }
-h1 { margin:0 0 10px; font-size:22px; }
-.sub { opacity:.8; font-size:14px; margin-bottom:14px; }
-button { background:var(--btn); color:var(--ink); border:1px solid var(--btn-br); padding:10px 14px; border-radius:12px; cursor:pointer; font-size:14px; transition:transform .15s ease, border-color .15s ease; }
-button:hover { transform:scale(1.05); border-color:var(--glow1); }
-button[disabled]{ opacity:.6; cursor:not-allowed; transform:none; }
-input[type="text"]{ width:100%; padding:12px; border-radius:12px; border:1px solid var(--btn-br); background:var(--btn); color:var(--ink); outline:none; }
-.row{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
-.result { margin-top:14px; font-size:16px; line-height:1.6; }
-.glow-text { font-weight:600; font-size:18px; background: linear-gradient(90deg, var(--glow1), var(--glow2), var(--glow1)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; animation: glow 3s infinite alternate; }
-@keyframes glow { from { text-shadow:0 0 10px var(--glow1), 0 0 20px var(--glow1); } to { text-shadow:0 0 20px var(--glow2), 0 0 30px var(--glow1); } }
-.exercise { margin-top:8px; font-size:15px; color:var(--muted); text-shadow:0 0 8px rgba(124,156,255,.5); }
-.modebar { display:flex; gap:8px; margin:8px 0 12px; align-items:center; }
-.modebar button.active { border-color:var(--glow1); transform:scale(1.03); }
-.panel { display:none; }
-.panel.show{ display:block; }
-.answer { min-height:48px; }
-.hint { font-size:12px; opacity:.75; margin-top:6px; }
-#toggleVoice { position:fixed; bottom:20px; right:20px; z-index:1000; background:var(--card); border:1px solid var(--btn-br); border-radius:20px; padding:10px 16px; box-shadow:0 4px 12px rgba(0,0,0,.4); }
-#toggleVoice.pulse { animation: pulse 1.6s infinite; border-color:var(--glow1); }
-@keyframes pulse { 0% { box-shadow:0 0 0 0 rgba(124,156,255,0.12); } 70% { box-shadow:0 0 0 8px rgba(124,156,255,0.02); } 100% { box-shadow:0 0 0 0 rgba(124,156,255,0.0); } }
-#iosUnlockBtn { position:fixed; top:40%; left:50%; transform:translate(-50%,-50%); padding:20px 30px; border-radius:14px; border:none; background:var(--glow1); color:#000; font-weight:600; font-size:16px; display:none; z-index:2000; }
-#blackoutBtn { position:fixed; top:20px; left:20px; z-index:1001; padding:10px 16px; border-radius:20px; border:1px solid var(--btn-br); background:var(--card); cursor:pointer; }
-#blackoutOverlay { position:fixed; top:0; left:0; width:100%; height:100%; background:black; z-index:9998; display:none; }
+*{box-sizing:border-box;}
+body{margin:0;font-family:system-ui,sans-serif;color:var(--ink);background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:20px;min-height:100vh;}
+.wrap{width:100%;max-width:1100px;display:flex;flex-wrap:wrap;gap:24px;justify-content:center;}
+.card{background:var(--card);border-radius:16px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.35);flex:1;min-width:300px;max-width:500px;}
+button{background:var(--btn);color:var(--ink);border:1px solid var(--btn-br);padding:10px 14px;border-radius:12px;cursor:pointer;transition:transform .15s ease;}
+button:hover{transform:scale(1.05);}
+button[disabled]{opacity:.6;cursor:not-allowed;transform:none;}
+input[type="text"]{width:100%;padding:10px;border-radius:12px;border:1px solid var(--btn-br);background:var(--btn);color:var(--ink);}
+.panel{display:none;}
+.panel.show{display:block;}
+#blackoutOverlay{position:fixed;top:0;left:0;width:100%;height:100%;background:black;z-index:9998;display:none;}
+#toggleVoice{position:fixed;bottom:20px;right:20px;z-index:10001;padding:10px 16px;border-radius:20px;cursor:pointer;}
+#blackoutBtn{position:fixed;top:20px;left:20px;z-index:10002;padding:10px 16px;border-radius:20px;cursor:pointer;}
+.result{margin-top:10px;}
+.glow-text {font-weight:600;font-size:16px;background: linear-gradient(90deg, var(--glow1), var(--glow2), var(--glow1)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;}
 </style>
 </head>
 <body>
@@ -48,9 +33,8 @@ input[type="text"]{ width:100%; padding:12px; border-radius:12px; border:1px sol
   <!-- Mood Detector -->
   <div class="card" id="moodCard">
     <h1>Mood Detector</h1>
-    <div class="sub">Analyze your facial expression for 4 seconds.</div>
-    <div class="row"><button id="startMood">Start</button></div>
-    <div id="moodResult" class="result">Press Start to analyze your mood.</div>
+    <button id="startMood">Start</button>
+    <div id="moodResult" class="result">Press Start to analyze mood.</div>
     <video id="video" autoplay muted playsinline style="display:none"></video>
     <canvas id="overlay" style="display:none"></canvas>
   </div>
@@ -58,36 +42,29 @@ input[type="text"]{ width:100%; padding:12px; border-radius:12px; border:1px sol
   <!-- Voice Assistant -->
   <div class="card" id="voiceCard">
     <h1>Voice Assistant</h1>
-    <div class="sub">Ask by typing, single voice shot, or continuous conversation.</div>
     <div class="modebar">
       <button id="mText" class="active">Text Mode</button>
       <button id="mVoice">Voice Chat</button>
       <button id="mCont">Voice Continuous</button>
       <div style="flex:1"></div>
-      <button id="stopAll">⏹ Stop</button>
+      <button id="stopAll">Stop</button>
     </div>
     <div id="panelText" class="panel show">
-      <div class="row" style="margin-bottom:8px; width:100%">
-        <input id="textIn" type="text" placeholder="Type your message…" />
-        <button id="sendBtn">Send</button>
-      </div>
-      <div class="hint">Auto-speaks every reply. “Stop” cancels speech.</div>
+      <input id="textIn" type="text" placeholder="Type your message..." />
+      <button id="sendBtn">Send</button>
     </div>
     <div id="panelVoice" class="panel">
-      <div class="row"><button id="startVoice">🎤 Start Listening</button></div>
-      <div class="hint">Single utterance → answer → auto-speak.</div>
+      <button id="startVoice">🎤 Start Listening</button>
     </div>
     <div id="panelCont" class="panel">
-      <div class="row"><button id="startCont">🔄 Start Continuous</button></div>
-      <div class="hint">Keeps listening and responding until you press Stop.</div>
+      <button id="startCont">🔄 Start Continuous</button>
     </div>
-    <div id="answer" class="result answer">Ask something by text or voice.</div>
+    <div id="answer" class="result">Ask something…</div>
   </div>
 </div>
 
 <button id="toggleVoice">Hide Assistant</button>
-<button id="blackoutBtn">Blackout Off</button>
-<button id="iosUnlockBtn">Tap to Enable Speech</button>
+<button id="blackoutBtn">Blackout: Off</button>
 <div id="blackoutOverlay"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
@@ -114,22 +91,26 @@ function setMode(which){
 }
 mText.onclick=()=>setMode('text'); mVoice.onclick=()=>setMode('voice'); mCont.onclick=()=>setMode('cont');
 
+// ---- Ask API ----
 async function ask(question){
   if(!question||!question.trim())return;
   stopSpeaking();
-  answerEl.textContent="Thinking…";
+  answerEl.textContent="Thinking...";
   try{
     const res=await fetch(`${API_URL}?question=${encodeURIComponent(question)}`);
     const data=await res.json();
     const txt=(data&&data.answer)?data.answer:"No answer received.";
     answerEl.innerHTML=`<span class="glow-text">${txt}</span>`;
     speak(txt);
-  }catch(e){ console.error("API error:",e); answerEl.textContent="Error connecting to API"; }
+  }catch(e){ console.error(e); answerEl.textContent="API Error"; }
 }
-function sendText(){ const q=textIn.value.trim(); if(!q)return; ask(q); textIn.value=""; }
-textIn.addEventListener('keydown', ev=>{ if(ev.key==='Enter'){ ev.preventDefault(); sendText(); } });
-sendBtn.addEventListener('click', sendText);
 
+// ---- Text mode ----
+function sendText(){ const q=textIn.value.trim(); if(!q)return; ask(q); textIn.value=""; }
+sendBtn.addEventListener('click', sendText);
+textIn.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); sendText(); } });
+
+// ---- Voice Recognition ----
 function newRecognizer(isContinuous){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR){alert("Speech recognition not supported."); return null;}
@@ -137,88 +118,85 @@ function newRecognizer(isContinuous){
   r.lang="en-US"; r.continuous=isContinuous; r.interimResults=false;
   r.onresult=e=>{ for(let i=e.resultIndex;i<e.results.length;i++){ if(e.results[i].isFinal){ ask(e.results[i][0].transcript.trim()); } }};
   r.onerror=ev=>console.warn("SR error:",ev);
-  r.onend=()=>{ if(isContinuous && contModeActive){ setTimeout(()=>{ try{ r.start(); }catch(e){} },250); }};
+  r.onend=()=>{ if(isContinuous && contModeActive){ setTimeout(()=>{ try{ r.start();}catch(e){} },250); }};
   return r;
 }
+function stopVoiceRec(){ contModeActive=false; try{ if(rec){rec.onend=null; rec.stop();} }catch(e){} rec=null; }
+
 document.getElementById('startVoice').onclick=()=>{ stopVoiceRec(); rec=newRecognizer(false); if(rec) rec.start(); };
 document.getElementById('startCont').onclick=startContinuous;
 function startContinuous(){ stopVoiceRec(); contModeActive=true; rec=newRecognizer(true); if(rec) rec.start(); }
-function stopVoiceRec(){ contModeActive=false; try{ if(rec){rec.onend=null; rec.stop();} }catch(e){} rec=null; }
 stopAllBtn.onclick=()=>{ stopVoiceRec(); stopSpeaking(); };
 
-// ---- Mood Detector ----
-const video=document.getElementById('video'), canvas=document.getElementById('overlay'), moodResult=document.getElementById('moodResult'), startMoodBtn=document.getElementById('startMood');
-let stream=null; const MODEL_URL='https://cdn.jsdelivr.net/gh/vladmandic/face-api/model/';
-async function loadModels(){ await Promise.all([faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL), faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)]); }
-async function startCamera(){ if(!stream){ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false}); video.srcObject=stream; await video.play(); } canvas.width=video.videoWidth||640; canvas.height=video.videoHeight||480; }
-function topExpression(exp){ let best={key:'neutral',val:0}; for(const [k,v] of Object.entries(exp)) if(v>best.val) best={key:k,val:v}; return best; }
-function moodMessage(e){ const map={ angry:{quote:"I am in control of my emotions.",exercise:"Box Breathing: Inhale 4, hold 4, exhale 4, hold 4."}, happy:{quote:"Happiness flows through me.",exercise:"Think 3 things you're grateful for."}, sad:{quote:"This feeling is temporary.",exercise:"5-4-3-2-1 Grounding."}, neutral:{quote:"Your calm presence is beautiful.",exercise:"Stretch your body lightly."}, surprised:{quote:"Every unexpected moment carries a hidden gift.",exercise:"Notice 3 familiar things."}, fearful:{quote:"Your fear is a passing cloud.",exercise:"Take 5 slow breaths."}, disgusted:{quote:"What disturbs you doesn't have to stay.",exercise:"Listen to a calming song."}}; return map[e]||{quote:"Stay mindful.",exercise:"Take a short pause."}; }
+// ---- Toggle assistant ----
+const toggleBtn=document.getElementById('toggleVoice');
+const voiceCard=document.getElementById('voiceCard');
+let hidden=false;
+toggleBtn.onclick=()=>{ hidden=!hidden; voiceCard.style.display=hidden?"none":"block"; toggleBtn.textContent=hidden?"Show Assistant":"Hide Assistant"; };
+
+// ---- Blackout ----
+const blackoutBtn=document.getElementById('blackoutBtn');
+const blackoutOverlay=document.getElementById('blackoutOverlay');
+let blackout=false;
+const startMood=document.getElementById('startMood');
+blackoutBtn.onclick=()=>{ 
+  blackout=!blackout; 
+  blackoutOverlay.style.display=blackout?'block':'none';
+  blackoutBtn.textContent=blackout?"Blackout: On":"Blackout: Off";
+  if(blackout){ stopVoiceRec(); stopSpeaking(); startMood.disabled=true; textIn.disabled=true; sendBtn.disabled=true; }
+  else{ startMood.disabled=false; textIn.disabled=false; sendBtn.disabled=false; }
+};
+
+// ---- Mood Detection ----
+const video=document.getElementById('video'), canvas=document.getElementById('overlay'), moodResult=document.getElementById('moodResult');
+let stream=null;
+async function loadModels(){ await Promise.all([ faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/gh/vladmandic/face-api/model/'), faceapi.nets.faceExpressionNet.loadFromUri('https://cdn.jsdelivr.net/gh/vladmandic/face-api/model/') ]); }
+async function startCamera(){ if(!stream){ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false}); video.srcObject=stream; await video.play(); canvas.width=video.videoWidth||640; canvas.height=video.videoHeight||480; } }
+function topExpression(expressions){ let best={key:'neutral',val:0}; for(const [k,v] of Object.entries(expressions)) if(v>best.val) best={key:k,val:v}; return best; }
+
+function moodMessage(emotion){ 
+  const map={
+    angry:{quote:"Breathe deeply and let go of tension.", exercise:"Try a quick 5-minute meditation."},
+    happy:{quote:"Keep shining your joy!", exercise:"Share your smile with someone today."},
+    sad:{quote:"It’s okay to feel sad.", exercise:"Write down 3 things you’re grateful for."},
+    neutral:{quote:"Calm and steady.", exercise:"Stretch your body for 2 minutes."},
+    surprised:{quote:"Wow, unexpected moments are part of life!", exercise:"Pause and reflect on something positive."},
+    fearful:{quote:"You are safe, breathe slowly.", exercise:"Ground yourself by naming 5 things you see."},
+    disgusted:{quote:"Relax and release negativity.", exercise:"Drink water and refresh yourself."}
+  };
+  return map[emotion]||{quote:"Stay mindful.", exercise:"Take a deep breath right now."}; 
+}
+
 async function analyzeMood(){
-  try{ await startCamera(); }catch(e){ moodResult.textContent="Camera access needed."; startMoodBtn.disabled=false; return; }
-  moodResult.textContent="Analyzing for 4 seconds…"; startMoodBtn.disabled=true;
-  const collected=[]; const start=Date.now();
+  try{ await startCamera(); }catch(e){ moodResult.textContent="Camera access needed."; startMood.disabled=false; return; }
+  moodResult.textContent="Analyzing mood..."; startMood.disabled=true; 
+  const collected=[]; const start=Date.now(); 
   async function capture(){
     const opts=new faceapi.TinyFaceDetectorOptions({inputSize:512,scoreThreshold:0.5});
     const det=await faceapi.detectSingleFace(video,opts).withFaceExpressions();
     if(det) collected.push(det.expressions);
     if(Date.now()-start<4000) requestAnimationFrame(capture);
     else{
-      if(!collected.length){ moodResult.textContent="No face detected."; startMoodBtn.disabled=false; return; }
+      if(!collected.length){ moodResult.textContent="No face detected."; startMood.disabled=false; return; }
       const avg={}; collected.forEach(exp=>{ for(const [k,v] of Object.entries(exp)) avg[k]=(avg[k]||0)+v; });
       for(const k in avg) avg[k]/=collected.length;
       const {key,val}=topExpression(avg); const msg=moodMessage(key);
-      moodResult.innerHTML=`<strong>Mood:</strong> ${key} (${(val*100).toFixed(1)}%)<br><span class="glow-text">${msg.quote}</span><div class="exercise">${msg.exercise}</div>`;
-      startMoodBtn.disabled=false;
+      moodResult.innerHTML=`<strong>Mood:</strong> ${key} (${(val*100).toFixed(1)}%)<br>
+        <span class="glow-text">${msg.quote}</span><br>
+        <em>${msg.exercise}</em>`;
+      speak(msg.quote + " " + msg.exercise);
+      startMood.disabled=false;
     }
   }
   capture();
 }
-startMoodBtn.addEventListener('click',analyzeMood);
+startMood.addEventListener('click',analyzeMood);
 loadModels();
 
-// ---- Toggle Assistant ----
-const toggleBtn=document.getElementById('toggleVoice'); let hidden=false; const voiceCard=document.getElementById('voiceCard'); const mainWrap=document.getElementById('mainWrap');
-function updateToggleUI(){ toggleBtn.textContent=hidden?"Show Assistant":"Hide Assistant"; voiceCard.style.display=hidden?"none":"block"; mainWrap.classList.toggle("solo",hidden); toggleBtn.classList.toggle('pulse',hidden); }
-toggleBtn.addEventListener('click',()=>{ hidden=!hidden; updateToggleUI(); });
-updateToggleUI();
-
-// ---- Blackout ----
-const blackoutBtn=document.getElementById('blackoutBtn'), blackoutOverlay=document.getElementById('blackoutOverlay');
-let blackoutActive=false;
-blackoutBtn.addEventListener('click',()=>{
-  blackoutActive=!blackoutActive;
-  blackoutOverlay.style.display=blackoutActive?"block":"none";
-  blackoutBtn.textContent=blackoutActive?"Blackout On":"Blackout Off";
-
-  if(blackoutActive){
-    stopVoiceRec();
-    stopSpeaking();
-    startMoodBtn.disabled=true;
-    textIn.disabled=true;
-    sendBtn.disabled=true;
-  }else{
-    startMoodBtn.disabled=false;
-    textIn.disabled=false;
-    sendBtn.disabled=false;
-  }
-});
-
-// ---- Hotkeys ----
-document.addEventListener('keydown',e=>{
-  if(e.key==='F1'){ e.preventDefault(); analyzeMood(); }
-  if(e.key==='F2'){ e.preventDefault(); document.getElementById('startVoice').click(); }
-  if(e.key==='F3'){ e.preventDefault(); stopAllBtn.click(); }
-});
-
-// ---- Mouse Shortcuts ----
-document.addEventListener('contextmenu', e => { e.preventDefault(); analyzeMood(); }); // right click = F1
-document.addEventListener('click', e => { if(e.detail === 1){ document.getElementById('startVoice').click(); }}); // single left = F2
-document.addEventListener('dblclick', e => { stopAllBtn.click(); }); // double left = F3
-
-console.log("Aina frontend ready. All features integrated + blackout toggle + mouse/keyboard shortcuts.");
+// ---- Mouse shortcuts ----
+document.addEventListener('contextmenu',e=>{ e.preventDefault(); analyzeMood(); }); // Right click = F1
+document.addEventListener('click',e=>{ if(e.detail===1){ document.getElementById('startVoice').click(); } }); // Single click = F2
+document.addEventListener('dblclick',e=>{ document.getElementById('startCont').click(); }); // Double click = F3
 </script>
 </body>
 </html>
-
-
-
