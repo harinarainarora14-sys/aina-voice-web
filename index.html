@@ -97,7 +97,7 @@ const API_URL = "https://voice-assistant-api-yya9.onrender.com/ask";
 let audioUnlocked=false; let speechQueue=[];
 const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;
 const iosBtn=document.getElementById('iosUnlockBtn');
-function speak(text){ if(!text)return; if(isIOS&&!audioUnlocked){ speechQueue.push(text); iosBtn.style.display='block'; return; } try{ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text); speechSynthesis.speak(u);}catch(e){}}; 
+function speak(text){ if(!text)return; if(isIOS&&!audioUnlocked){ speechQueue.push(text); iosBtn.style.display='block'; return; } try{ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text); speechSynthesis.speak(u);}catch(e){}; } 
 function stopSpeaking(){ try{speechSynthesis.cancel();}catch(e){} }
 if(isIOS){ iosBtn.addEventListener('click',()=>{ try{ const u=new SpeechSynthesisUtterance(""); u.volume=0; speechSynthesis.speak(u); audioUnlocked=true; }catch(e){} iosBtn.style.display='none'; while(speechQueue.length) speak(speechQueue.shift()); }); }
 
@@ -188,7 +188,6 @@ async function analyzeMood(){
         <span class="glow-text">${msg.quote}</span>
         <div class="exercise">${msg.exercise}</div>`;
 
-      // 🔊 Speak mood + percentage + affirmation + exercise
       speak(`Your mood seems ${key}, about ${percent} percent. ${msg.quote}. Now try this exercise: ${msg.exercise}`);
 
       startMood.disabled=false; 
@@ -199,10 +198,13 @@ async function analyzeMood(){
 startMood.addEventListener('click',analyzeMood);
 loadModels();
 
-// ---- Mouse Shortcuts ----
-document.addEventListener('contextmenu',e=>{ e.preventDefault(); analyzeMood(); });
-document.addEventListener('click',e=>{ if(e.detail===1) document.getElementById('startVoice').click(); });
-document.addEventListener('dblclick',e=>{ document.getElementById('startCont').click(); });
+// ---- Keyboard Shortcuts ----
+document.addEventListener('keydown', e => {
+  if(e.key==='F2'){ analyzeMood(); }               // Start Mood Detector
+  else if(e.key==='F3'){ document.getElementById('startVoice').click(); } // Start voice chat
+  else if(e.key==='F4'){ stopAllBtn.click(); }    // Stop everything
+});
 </script>
 </body>
 </html>
+
