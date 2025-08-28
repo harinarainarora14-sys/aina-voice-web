@@ -25,6 +25,7 @@ input[type="text"]{width:100%;padding:10px;border-radius:12px;border:1px solid v
 #blackoutBtn{position:fixed;top:20px;left:20px;z-index:10002;padding:10px 16px;border-radius:20px;cursor:pointer;}
 .result{margin-top:10px;}
 .glow-text {font-weight:600;font-size:16px;background: linear-gradient(90deg, var(--glow1), var(--glow2), var(--glow1)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;}
+.exercise-text {margin-top:5px;font-style:italic;color:#a0c4ff;}
 </style>
 </head>
 <body>
@@ -116,7 +117,7 @@ function newRecognizer(isContinuous){
   if(!SR){alert("Speech recognition not supported."); return null;}
   const r=new SR();
   r.lang="en-US"; r.continuous=isContinuous; r.interimResults=false;
-  r.onresult=e=>{ for(let i=e.resultIndex;i<e.results.length;i++){ if(e.results[i].isFinal){ ask(e.results[i][0].transcript.trim()); } }};
+  r.onresult=e=>{ for(let i=e.resultIndex;i<e.results.length;i++){ if(e.results[i].isFinal){ ask(e.results[i][0].transcript.trim()); }}};
   r.onerror=ev=>console.warn("SR error:",ev);
   r.onend=()=>{ if(isContinuous && contModeActive){ setTimeout(()=>{ try{ r.start();}catch(e){} },250); }};
   return r;
@@ -149,17 +150,30 @@ blackoutBtn.onclick=()=>{
   sendBtn.disabled=blackout;
 };
 
-// ---- Mood Detection ----
+// ---- Mood Detection + Affirmation + Exercise ----
 const video=document.getElementById('video'), canvas=document.getElementById('overlay'), moodResult=document.getElementById('moodResult');
 let stream=null;
 async function loadModels(){ await Promise.all([ faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/gh/vladmandic/face-api/model/'), faceapi.nets.faceExpressionNet.loadFromUri('https://cdn.jsdelivr.net/gh/vladmandic/face-api/model/') ]); }
 async function startCamera(){ if(!stream){ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false}); video.srcObject=stream; await video.play(); canvas.width=video.videoWidth||640; canvas.height=video.videoHeight||480; } }
 function topExpression(expressions){ let best={key:'neutral',val:0}; for(const [k,v] of Object.entries(expressions)) if(v>best.val) best={key:k,val:v}; return best; }
-function moodMessage(emotion){ const map={ angry:{quote:"Stay calm."}, happy:{quote:"You are happy!"}, sad:{quote:"It’s okay to feel sad."}, neutral:{quote:"Calm and steady."}, surprised:{quote:"Wow!"}, fearful:{quote:"Breathe."}, disgusted:{quote:"Relax."} }; return map[emotion]||{quote:"Stay mindful."}; }
+
+function moodMessage(emotion){
+  const map={
+    angry:{quote:"Stay calm.", exercise:"Take 3 deep breaths slowly."},
+    happy:{quote:"You are happy!", exercise:"Smile at yourself in the mirror."},
+    sad:{quote:"It’s okay to feel sad.", exercise:"Write down 1 thing that made you smile today."},
+    neutral:{quote:"Calm and steady.", exercise:"Stretch your arms and shoulders."},
+    surprised:{quote:"Wow!", exercise:"Take a moment to notice your surroundings."},
+    fearful:{quote:"Breathe.", exercise:"Place your hand on your chest and breathe slowly."},
+    disgusted:{quote:"Relax.", exercise:"Take a sip of water and relax your shoulders."}
+  };
+  return map[emotion]||{quote:"Stay mindful.", exercise:"Take a short mindful pause."};
+}
+
 async function analyzeMood(){
   try{ await startCamera(); }catch(e){ moodResult.textContent="Camera access needed."; startMood.disabled=false; return; }
-  moodResult.textContent="Analyzing mood..."; startMood.disabled=true; 
-  const collected=[]; const start=Date.now(); 
+  moodResult.textContent="Analyzing mood..."; startMood.disabled=true;
+  const collected=[]; const start=Date.now();
   async function capture(){
     const opts=new faceapi.TinyFaceDetectorOptions({inputSize:512,scoreThreshold:0.5});
     const det=await faceapi.detectSingleFace(video,opts).withFaceExpressions();
@@ -170,7 +184,7 @@ async function analyzeMood(){
       const avg={}; collected.forEach(exp=>{ for(const [k,v] of Object.entries(exp)) avg[k]=(avg[k]||0)+v; });
       for(const k in avg) avg[k]/=collected.length;
       const {key,val}=topExpression(avg); const msg=moodMessage(key);
-      moodResult.innerHTML=`<strong>Mood:</strong> ${key} (${(val*100).toFixed(1)}%)<br><span class="glow-text">${msg.quote}</span>`;
+      moodResult.innerHTML=`<strong>Mood:</strong> ${key} (${(val*100).toFixed(1)}%)<br><span class="glow-text">${msg.quote}</span><div class="exercise-text">Exercise: ${msg.exercise}</div>`;
       startMood.disabled=false;
     }
   }
@@ -181,3 +195,4 @@ loadModels();
 </script>
 </body>
 </html>
+
