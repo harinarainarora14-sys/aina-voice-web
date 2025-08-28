@@ -34,16 +34,35 @@
     .panel.show{ display:block; }
     .answer { min-height:48px; }
     .hint { font-size:12px; opacity:.75; margin-top:6px; }
-    #toggleVoice, #blackoutBtn { position:fixed; bottom:20px; z-index:1000; background:var(--card); border:1px solid var(--btn-br); border-radius:20px; padding:10px 16px; box-shadow:0 4px 12px rgba(0,0,0,.4); }
-    #toggleVoice { right:20px; }
-    #blackoutBtn { left:20px; }
+    #toggleVoice { position:fixed; bottom:20px; right:20px; z-index:1000; background:var(--card); border:1px solid var(--btn-br); border-radius:20px; padding:10px 16px; box-shadow:0 4px 12px rgba(0,0,0,.4); }
     #toggleVoice.pulse { animation: pulse 1.6s infinite; border-color:var(--glow1); }
     @keyframes pulse { 0% { box-shadow:0 0 0 0 rgba(124,156,255,0.12); } 70% { box-shadow:0 0 0 8px rgba(124,156,255,0.02); } 100% { box-shadow:0 0 0 0 rgba(124,156,255,0.0); } }
     #iosUnlockBtn { position:fixed; top:40%; left:50%; transform:translate(-50%,-50%); padding:20px 30px; border-radius:14px; border:none; background:var(--glow1); color:#000; font-weight:600; font-size:16px; display:none; z-index:2000; }
-    #blackOverlay { position:fixed; top:0; left:0; width:100%; height:100%; background:black; z-index:1500; display:none; }
+    /* Blackout overlay */
+    #blackOverlay {
+      position:fixed;
+      top:0; left:0;
+      width:100%; height:100%;
+      background:black;
+      z-index:1500;
+      display:none;
+    }
+    #blackoutBtn {
+      position:fixed;
+      left:20px;
+      bottom:20px;
+      z-index:1600; /* Always above overlay */
+      background:var(--card);
+      border:1px solid var(--btn-br);
+      border-radius:20px;
+      padding:10px 16px;
+      box-shadow:0 4px 12px rgba(0,0,0,.4);
+    }
   </style>
 </head>
 <body>
+<div id="blackOverlay"></div>
+
 <div class="wrap" id="mainWrap">
   <!-- Mood Detector -->
   <div class="card" id="moodCard">
@@ -86,9 +105,8 @@
 </div>
 
 <button id="toggleVoice">Hide Assistant</button>
-<button id="blackoutBtn">🕶 Blackout</button>
+<button id="blackoutBtn">Toggle Blackout</button>
 <button id="iosUnlockBtn">Tap to Enable Speech</button>
-<div id="blackOverlay"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
 <script>
@@ -225,37 +243,24 @@ document.addEventListener('keydown',e=>{
   if(e.key==='F3'){ e.preventDefault(); stopAllBtn.click(); }
 });
 
-// 🖱 Mouse remap: L=Voice, L dbl=Stop, R=Mood
-document.addEventListener('contextmenu', e => e.preventDefault());
+// 🖱 Mouse remap: Right=F1 (Mood), Left click=Voice, Left double click=Stop
+document.addEventListener('contextmenu', e => e.preventDefault()); // block right menu
 document.addEventListener('mousedown', e => {
-  e.preventDefault();
-  if (e.button === 0) startVoice.click();      // left click → Voice
-  if (e.button === 2) analyzeMood();           // right click → Mood
+  if (e.button === 2) { e.preventDefault(); analyzeMood(); }     // right → Mood
+  if (e.button === 0) { e.preventDefault(); startVoice.click(); } // left single → Voice
 });
 document.addEventListener('dblclick', e => {
-  if (e.button === 0) stopAllBtn.click();      // double left → Stop
+  if (e.button === 0) { e.preventDefault(); stopAllBtn.click(); } // left double → Stop
 });
 
-// 🌑 Blackout mode
-const blackoutBtn=document.getElementById('blackoutBtn'); 
+// 🔲 Blackout toggle
+const blackoutBtn=document.getElementById('blackoutBtn');
 const blackOverlay=document.getElementById('blackOverlay');
-let blackoutActive=false;
-
-blackoutBtn.onclick=()=>{
-  blackoutActive=!blackoutActive;
-  if(blackoutActive){
-    blackOverlay.style.display='block';
-    blackoutBtn.textContent="🌕 Restore";
-    stopVoiceRec();
-    stopSpeaking();
-  } else {
-    blackOverlay.style.display='none';
-    blackoutBtn.textContent="🕶 Blackout";
-    updateToggleUI();
-  }
-};
-
-console.log("Assistant loaded");
+let blackout=false;
+blackoutBtn.addEventListener('click',()=>{
+  blackout=!blackout;
+  blackOverlay.style.display=blackout?'block':'none';
+});
 </script>
 </body>
 </html>
